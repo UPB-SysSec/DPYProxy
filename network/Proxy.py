@@ -93,15 +93,14 @@ class Proxy:
         try:
             while True:
                 if not record_frag:
-                    if not record_frag:
-                        data = from_socket.recv(4096)
-                        if not data:
-                            try:
-                                to_socket.close()
-                            except:
-                                pass
-                        else:
-                            to_socket.send(data)
+                    data = from_socket.recv(4096)
+                    if not data:
+                        try:
+                            to_socket.close()
+                        except:
+                            pass
+                    else:
+                        to_socket.send(data)
                 else:
                     try:
                         record_header = from_socket.peek(5)
