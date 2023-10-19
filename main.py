@@ -97,7 +97,7 @@ def main():
     if args.debug:
         logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
     else:
-        logging.basicConfig(stream=sys.stderr, level=logging.WARNING)
+        logging.basicConfig(stream=sys.stderr, level=logging.INFO)
 
     setting = args.setting
     if setting == 0:

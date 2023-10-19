@@ -86,7 +86,19 @@ class WrappedSocket:
                 self.socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
 
     def close(self):
+        """
+        Closes the underlying socket.
+        """
         self.socket.close()
+
+    def try_close(self):
+        """
+        Tries to close the underlying socket. If that fails, we ignore the error.
+        """
+        try:
+            self.socket.close()
+        except:
+            pass
 
     def inject(self, content: bytes):
         """
