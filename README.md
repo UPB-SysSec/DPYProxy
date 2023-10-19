@@ -52,26 +52,85 @@ options:
                         Whether to resolve domain before including it in eventual HTTP CONNECT request to second proxy (default: False)
 ```
 
-## Example Setup
-Launching both
+## Settings
 
-```python3 main.py --setting 0```
+### -- debug
+Turns on debugging statements.
 
-and
+### --proxy_mode
+DPYProxy proxies based on the first message it receives. It can infer a destination from **HTTP GET** messages,
+**HTTP CONNECT** messages and **TLS ClientHello** messages that contain the **SNI** extension. By default, DPYProxy 
+detects the message type automatically. You can restrict it to a specific type using this argument. Use HTTP for 
+HTTP GET messages, HTTPS for HTTP CONNECT messages and SNI for TLS ClientHello messages.
 
-```python3 main.py --setting 1```
+### --timeout
+The timeout for which to keep open the connections in either direction. If no data is received for the specified time, 
+DPYProxy cancels the socket. In seconds.
 
-launches two instances of DPYProxy on your machine accessible under `127.0.0.1:4433`. The first instance injects TCP and
-TLS record fragmentation into the connection. The second functions as a plain HTTP CONNECT proxy. This setup simulates
-a usual deployment of DPYProxy.
+### --port
+The port on which DPYProxy listens for incoming connections.
 
-## DPI setup
-Without parameters, DPYProxy is accessible under ```127.0.0.1:4433``` and utilizes both TPC and TLS record
-fragmentation for DPI circumvention.
+### --record_frag
+Enables TLS record fragmentation. Any received TLS handshake message is fragmented into multiple TLS records. The size 
+can be specified by --frag-size. When run in combination with --tcp-frag, a TLS record is contained in a slightly larger TCP segment
+that accounts for header bytes.
 
-```python3 main.py```
+### --tcp_frag
+Enables TCP fragmentation. Any received TCP message is fragmented into multiple TCP segments. The size can be specified
+by --frag-size. When run in combination with --record-frag, a TLS record is contained in a slightly larger TCP segment
+that accounts for header bytes.
 
-You can specify another proxy for IP censorship circumvention using the `--forward_proxy_<arg>` arguments.
+### --frag-size
+The size of the fragments in bytes. The default is 20 bytes. Note that a large fragment size can lead to no 
+fragmentation for smaller messages.
+
+### --dot
+DPYProxy resolves any domain it receives to detect the IP address of the destination. By default, it uses the system DNS
+server. By enabling this option, DPYProxy uses DNS over TLS to resolve the domain. You can specify the DNS server using
+the --dot-resolver argument.
+
+### --dot-resolver
+The IP address of the DNS server to use for DNS over TLS. The default is Cloudflare's primary DNS server `1.1.1.1`.
+
+### --forward_proxy_...
+You can specify a forward proxy for IP censorship circumvention. DPYProxy will forward any message it receives to the 
+forward proxy instead of the destination. You can specify the address and port of the forward proxy as well as its mode
+of operation. For example, you can specify a forward proxy that only proxies HTTP CONNECT messages. DPYProxy will send 
+the corresponding message to the server. You can also specify whether DPYProxy should resolve the domain before sending
+the HTTP CONNECT message to the forward proxy. This can be helpful if the forward proxy does not support DNS resolution.
+
+## Examples
+
+`python3 main.py --record_frag --no-tcp_frag` launches DPYProxy with TLS record fragmentation enabled. TCP fragmentation is 
+turned off.
+
+`python3 main.py --no-record_frag --no-tcp_frag --debug` launches DPYProxy without any censorship circumvention techniques but enables debugging.
+
+`python3 main.py --frag_size 100` launches DPYProxy with both TLS record and TCP fragmentation
+and sets the fragment size to 100 bytes. The TLS record will be of size 100 while the encompassing TCP segments will be
+just large enough to contain the fragmented TLS record.
+
+`python3 main.py --record_frag --dot --dot_resolver 8.8.8.8 --port 443` launches DPYProxy on port 443 and enables TLS record fragmentation. 
+It also enables DNS over TLS to resolve the domain of the destination. For that, it uses Google's DNS server `8.8.8.8`.
+
+`python3 main.py --record_frag --forward_proxy_address 192.168.0.1 --forward_proxy_port 8080 --forward_proxy_mode HTTPS 
+--forward_proxy_resolve_address` launches DPYProxy with TLS record fragmentation and a forward proxy. The forward proxy 
+is specified by its address and port. While DPYProxy accepts HTTP GET, HTTP CONNECT and TLS ClientHello messages for 
+proxying, it connects to the forward proxy using HTTP CONNECT.
+
+## Testing
+
+Setup DPYProxy using 
+```sh
+python3 main.py --record_frag --tcp_frag --frag_size 20 --port 4433
+```
+
+you can test it using curl
+```sh
+curl -p -x localhost:4433 https://www.wikipedia.org
+```
+
+using some kind of capturing tool like wireshark you can inspect the fragmented TLS records and TCP segments.
 
 # Roadmap
 
