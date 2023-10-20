@@ -4,26 +4,27 @@ import threading
 
 import dns
 
+from collections import namedtuple
 from network.WrappedSocket import WrappedSocket
 from exception.ParserException import ParserException
 from enumerators.ProxyMode import ProxyMode
 from util.Util import is_valid_ipv4_address
 from util.constants import TLS_1_0_HEADER, TLS_1_2_HEADER, TLS_1_1_HEADER, HTTP_200_RESPONSE
 
+ProxyConfig = namedtuple("ProxyMode", ['mode', 'host', 'port'])
 
 class Proxy:
     """
     Proxy server
     """
 
-    def __init__(self, timeout: int = 120, port: int = 4433, record_frag: bool = False, tcp_frag: bool = False,
-                 frag_size: int = 20, dot: bool = False, dot_ip: str = "8.8.4.4", proxy_mode: ProxyMode = ProxyMode.ALL,
-                 forward_proxy_address: str = None, forward_proxy_port: int = None,
-                 forward_proxy_mode: ProxyMode = ProxyMode.SNI, forward_proxy_resolve_address: bool = False):
+    def __init__(self, config: ProxyConfig, timeout: int = 120, record_frag: bool = False, tcp_frag: bool = False,
+                 frag_size: int = 20, dot: bool = False, dot_ip: str = "8.8.4.4",
+                 forward_proxy: ProxyConfig = None, forward_proxy_resolve_address: bool = False):
         # timeout for socket reads and message reception
         self.timeout = timeout
         # own port
-        self.port = port
+        self.config = config
         # record fragmentation settings
         self.record_frag = record_frag
         self.tcp_frag = tcp_frag
@@ -31,12 +32,8 @@ class Proxy:
         # whether to use dot for domain resolution
         self.dot = dot
         self.dot_ip = dot_ip
-        # own proxy mode
-        self.proxy_mode = proxy_mode
         # settings for another proxy to contact further down the line
-        self.forward_proxy_address = forward_proxy_address
-        self.forward_proxy_port = forward_proxy_port
-        self.forward_proxy_mode = forward_proxy_mode
+        self.forward_proxy = forward_proxy
         self.forward_proxy_resolve_address = forward_proxy_resolve_address
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -155,7 +152,7 @@ class Proxy:
         Reads a proxy destination address and returns the host and port of the destination.
         :return: Host and port of the destination server.
         """
-        proxy_mode = self.proxy_mode
+        proxy_mode = self.config.mode
         # dynamically determine proxy mode
         if proxy_mode == ProxyMode.ALL:
             header = ssocket.peek(16)
@@ -205,23 +202,20 @@ class Proxy:
 
         # resolve domain if forward host wants it, or we do not have a forward host
         if not is_valid_ipv4_address(host) and \
-                (self.forward_proxy_resolve_address or self.forward_proxy_address is None):
+                (self.forward_proxy_resolve_address or self.forward_proxy is None):
             _host = host
             host = self.resolve_domain(host)
             Proxy.debug(f"Resolved {host} from {_host}", f"{address[0]}:{address[1]}")
 
         # set correct target
-        if self.forward_proxy_address is None:
-            target_host = host
-            target_port = port
+        if self.forward_proxy is None:
+            target_address = (host, port)
         else:
-            target_host = self.forward_proxy_address
-            target_port = self.forward_proxy_port
-            Proxy.debug(f"Using forward proxy {target_host}:{target_port}", f"{address[0]}:{address[1]}")
+            target_address = (self.forward_proxy.host, self.forward_proxy.port)
+            Proxy.debug(f"Using forward proxy {target_address}", f"{address[0]}:{address[1]}")
 
         # open socket to server
-        server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        server_socket.connect((target_host, target_port))
+        server_socket = socket.create_connection(target_address)
         if self.tcp_frag and self.record_frag:
             # align record and tcp fragment size
             server_socket = WrappedSocket(self.timeout, server_socket, self.frag_size + 5)
@@ -229,12 +223,12 @@ class Proxy:
             server_socket = WrappedSocket(self.timeout, server_socket, self.frag_size)
         else:
             server_socket = WrappedSocket(self.timeout, server_socket)
-        logging.info(f"Connected {address[0]}:{address[1]} to {target_host}:{target_port}")
+        logging.info(f"Connected {address[0]}:{address[1]} to {target_address[0]}:{target_address[1]}")
 
         try:
             # send proxy messages if necessary
             # TODO: also support proxy authentication?
-            if self.forward_proxy_address is not None and self.forward_proxy_mode == ProxyMode.HTTPS \
+            if self.forward_proxy is not None and self.forward_proxy.mode == ProxyMode.HTTPS \
                     and needs_proxy_message:
                 server_socket.send(f'CONNECT {host}:{port} HTTP/1.1\nHost: {host}:{port}\n\n'
                                    .encode('ASCII'))
@@ -252,11 +246,11 @@ class Proxy:
         # start proxying
         (threading.Thread(target=self.forward, args=(client_socket,
                                                      server_socket,
-                                                     f"{address[0]}:{address[1]}->{target_host}:{target_port}",
+                                                     f"{address[0]}:{address[1]}->{target_address[0]}:{target_address[1]}",
                                                      self.record_frag)).start())
         threading.Thread(target=self.forward, args=(server_socket,
                                                     client_socket,
-                                                    f"{target_host}:{target_port}->{address[0]}:{address[1]}",
+                                                    f"{target_address[0]}:{target_address[1]}->{address[0]}:{address[1]}",
                                                     )).start()
 
     @staticmethod
@@ -269,9 +263,9 @@ class Proxy:
         :return:
         """
         # opening server socket
-        self.server.bind(("0.0.0.0", self.port))
+        self.server.bind((self.config.host, self.config.port))
         self.server.listen()
-        print(f"### Started {self.proxy_mode} proxy on {self.port} ###")
+        print(f"### Started {self.config.mode} proxy on {self.config.host}:{self.config.port} ###")
         while True:  # listen for incoming connections
             client_socket, address = self.server.accept()
             client_socket = WrappedSocket(self.timeout, client_socket)
