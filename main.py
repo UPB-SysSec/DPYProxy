@@ -14,11 +14,6 @@ def initialize_parser():
     """
     parser = argparse.ArgumentParser(description='Optional app description')
 
-    parser.add_argument_group('Fast settings')
-    parser.add_argument('--setting', type=int,
-                        default=-1,
-                        help='Fast setting for proxy setup.')
-
     # Standard arguments
     parser.add_argument_group('Standard arguments')
 
@@ -103,7 +98,6 @@ def main():
     else:
         logging.basicConfig(stream=sys.stderr, level=logging.INFO)
 
-    setting = args.setting
     config = ProxyConfig(args.proxy_mode, args.host, args.port)
     forwardProxy = None
     if args.forward_proxy_host is not None:
