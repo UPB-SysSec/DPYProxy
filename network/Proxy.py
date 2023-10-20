@@ -19,7 +19,7 @@ class Proxy:
     """
 
     def __init__(self, config: ProxyConfig, timeout: int = 120, record_frag: bool = False, tcp_frag: bool = False,
-                 frag_size: int = 20, dot: bool = False, dot_ip: str = "8.8.4.4",
+                 frag_size: int = 20, dot_ip: str = "8.8.4.4",
                  forward_proxy: ProxyConfig = None, forward_proxy_resolve_address: bool = False):
         # timeout for socket reads and message reception
         self.timeout = timeout
@@ -30,7 +30,6 @@ class Proxy:
         self.tcp_frag = tcp_frag
         self.frag_size = frag_size
         # whether to use dot for domain resolution
-        self.dot = dot
         self.dot_ip = dot_ip
         # settings for another proxy to contact further down the line
         self.forward_proxy = forward_proxy
@@ -44,7 +43,7 @@ class Proxy:
         :param domain: domain name to resolve
         :return: One ip address for the domain or None
         """
-        if not self.dot:
+        if not self.dot_ip:
             return socket.gethostbyname(domain)
         else:
             # TODO: doh/doq
@@ -266,6 +265,10 @@ class Proxy:
         self.server.bind((self.config.host, self.config.port))
         self.server.listen()
         print(f"### Started {self.config.mode} proxy on {self.config.host}:{self.config.port} ###")
+        if self.dot_ip:
+            logging.debug(f"Using DoT resolver {self.dot_ip}")
+        if self.forward_proxy:
+            logging.debug(f"Using forward proxy {self.forward_proxy}")
         while True:  # listen for incoming connections
             client_socket, address = self.server.accept()
             client_socket = WrappedSocket(self.timeout, client_socket)

@@ -53,23 +53,18 @@ def initialize_parser():
                         default=20,
                         help='Bytes in each tpc/ tls record fragment')
 
-    parser.add_argument('--dot', type=bool,
-                        default=False,
-                        action=argparse.BooleanOptionalAction,
-                        help='Whether to use dot for address resolution')
-
     parser.add_argument('--dot_resolver', type=str,
-                        default='1.1.1.1',
+                        default=None,
                         help='DNS server ip for DNS over TLS')
 
     parser.add_argument_group('Forward proxy arguments')
 
     parser.add_argument('--forward_proxy_host', type=str,
-                        default=None,
+                        default='localhost',
                         help='Host of the forward proxy if any is present')
 
     parser.add_argument('--forward_proxy_port', type=int,
-                        default=4433,
+                        default=None,
                         help='Port the forward proxy server runs on')
 
     parser.add_argument('--forward_proxy_mode', type=ProxyMode.__getitem__,
@@ -100,10 +95,10 @@ def main():
 
     config = ProxyConfig(args.proxy_mode, args.host, args.port)
     forwardProxy = None
-    if args.forward_proxy_host is not None:
+    if args.forward_proxy_port is not None:
         forwardProxy = ProxyConfig(args.forward_proxy_mode, args.forward_proxy_host, args.forward_proxy_port)
 
-    proxy = Proxy(config, args.timeout, args.record_frag, args.tcp_frag, args.frag_size, args.dot,
+    proxy = Proxy(config, args.timeout, args.record_frag, args.tcp_frag, args.frag_size,
                     args.dot_resolver, forwardProxy, args.forward_proxy_resolve_address)
     proxy.start()
 
