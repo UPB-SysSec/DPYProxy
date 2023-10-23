@@ -4,7 +4,7 @@ import sys
 import argparse
 
 from enumerators.ProxyMode import ProxyMode
-from network.Proxy import Proxy
+from network.Proxy import Proxy, ProxyConfig
 
 
 def initialize_parser():
@@ -13,11 +13,6 @@ def initialize_parser():
     :return:
     """
     parser = argparse.ArgumentParser(description='Optional app description')
-
-    parser.add_argument_group('Fast settings')
-    parser.add_argument('--setting', type=int,
-                        default=-1,
-                        help='Fast setting for proxy setup.')
 
     # Standard arguments
     parser.add_argument_group('Standard arguments')
@@ -35,6 +30,10 @@ def initialize_parser():
     parser.add_argument('--timeout', type=int,
                         default=120,
                         help='Connection timeout in seconds')
+
+    parser.add_argument('--host', type=str,
+                        default="localhost",
+                        help='Address the proxy server runs on')
 
     parser.add_argument('--port', type=int,
                         default=4433,
@@ -54,23 +53,18 @@ def initialize_parser():
                         default=20,
                         help='Bytes in each tpc/ tls record fragment')
 
-    parser.add_argument('--dot', type=bool,
-                        default=False,
-                        action=argparse.BooleanOptionalAction,
-                        help='Whether to use dot for address resolution')
-
     parser.add_argument('--dot_resolver', type=str,
-                        default='1.1.1.1',
+                        default=None,
                         help='DNS server ip for DNS over TLS')
 
     parser.add_argument_group('Forward proxy arguments')
 
-    parser.add_argument('--forward_proxy_address', type=str,
-                        default=None,
-                        help='Address of the forward proxy if any is present')
+    parser.add_argument('--forward_proxy_host', type=str,
+                        default='localhost',
+                        help='Host of the forward proxy if any is present')
 
     parser.add_argument('--forward_proxy_port', type=int,
-                        default=4433,
+                        default=None,
                         help='Port the forward proxy server runs on')
 
     parser.add_argument('--forward_proxy_mode', type=ProxyMode.__getitem__,
@@ -99,19 +93,13 @@ def main():
     else:
         logging.basicConfig(stream=sys.stderr, level=logging.INFO)
 
-    setting = args.setting
-    if setting == 0:
-        proxy = Proxy(args.timeout, args.port, True, True, 20, False, args.dot_resolver,
-                      ProxyMode.ALL, '127.0.0.1', 4434, ProxyMode.SNI,
-                      False)
-    elif setting == 1:
-        proxy = Proxy(args.timeout, 4434, False, False, args.frag_size, False, args.dot_resolver,
-                      ProxyMode.ALL, None, None, ProxyMode.HTTPS,
-                      False)
-    else:
-        proxy = Proxy(args.timeout, args.port, args.record_frag, args.tcp_frag, args.frag_size, args.dot,
-                      args.dot_resolver, args.proxy_mode, args.forward_proxy_address, args.forward_proxy_port,
-                      args.forward_proxy_mode, args.forward_proxy_resolve_address)
+    config = ProxyConfig(args.proxy_mode, args.host, args.port)
+    forwardProxy = None
+    if args.forward_proxy_port is not None:
+        forwardProxy = ProxyConfig(args.forward_proxy_mode, args.forward_proxy_host, args.forward_proxy_port)
+
+    proxy = Proxy(config, args.timeout, args.record_frag, args.tcp_frag, args.frag_size,
+                    args.dot_resolver, forwardProxy, args.forward_proxy_resolve_address)
     proxy.start()
 
 
