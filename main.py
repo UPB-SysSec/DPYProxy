@@ -4,7 +4,8 @@ import sys
 import argparse
 
 from enumerators.ProxyMode import ProxyMode
-from network.Proxy import Proxy, ProxyConfig
+from network.Proxy import Proxy
+from network.NetworkAddress import NetworkAddress
 
 
 def initialize_parser():
@@ -12,6 +13,10 @@ def initialize_parser():
     Registers all arguments for command line parsing.
     :return:
     """
+
+    def list_of_modes(arg):
+        return list(map(lambda x: ProxyMode(x), arg.split(",")))
+
     parser = argparse.ArgumentParser(description='Optional app description')
 
     # Standard arguments
@@ -22,10 +27,10 @@ def initialize_parser():
                         action=argparse.BooleanOptionalAction,
                         help="Turns on debugging")
 
-    parser.add_argument('--proxy_mode', type=ProxyMode.__getitem__,
+    parser.add_argument('--disabled_modes', type=list_of_modes,
                         choices=ProxyMode,
-                        default=ProxyMode.ALL,
-                        help='Which type of proxy to run')
+                        default=[],
+                        help='List of proxy modes to ignore. By default, all none are disabled. Hence, all are enabled')
 
     parser.add_argument('--timeout', type=int,
                         default=120,
@@ -93,13 +98,13 @@ def main():
     else:
         logging.basicConfig(stream=sys.stderr, level=logging.INFO)
 
-    config = ProxyConfig(args.proxy_mode, args.host, args.port)
-    forwardProxy = None
+    server_address = NetworkAddress(args.host, args.port)
+    forward_proxy = None
     if args.forward_proxy_port is not None:
-        forwardProxy = ProxyConfig(args.forward_proxy_mode, args.forward_proxy_host, args.forward_proxy_port)
+        forward_proxy = NetworkAddress(args.forward_proxy_host, args.forward_proxy_port)
 
-    proxy = Proxy(config, args.timeout, args.record_frag, args.tcp_frag, args.frag_size,
-                    args.dot_resolver, forwardProxy, args.forward_proxy_resolve_address)
+    proxy = Proxy(server_address, args.timeout, args.record_frag, args.tcp_frag, args.frag_size,
+                  args.dot_resolver, forward_proxy, args.forwarward_proxy_mode, args.forward_proxy_resolve_address)
     proxy.start()
 
 

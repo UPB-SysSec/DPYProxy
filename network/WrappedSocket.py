@@ -2,7 +2,7 @@ import socket
 from time import time
 
 from exception.ParserException import ParserException
-from util.constants import TLS_1_1_HEADER, TLS_1_0_HEADER, TLS_1_2_HEADER
+from util.constants import TLS_1_1_HEADER, TLS_1_0_HEADER, TLS_1_2_HEADER, STANDARD_SOCKET_RECEIVE_SIZE
 
 
 class WrappedSocket:
@@ -24,7 +24,7 @@ class WrappedSocket:
         :return: Read data
         """
         while len(self.buffer) < size:
-            self.buffer += self.socket.recv(4096)
+            self.buffer += self.socket.recv(STANDARD_SOCKET_RECEIVE_SIZE)
         _res = self.buffer[:size]
         self.buffer = self.buffer[size:]
         return _res
@@ -42,7 +42,7 @@ class WrappedSocket:
                 raise ParserException(f"Exceeded max length of {max_len} bytes")
             if time()-start_time > self.timeout:
                 raise ParserException(f"Exceeded timeout of {self.timeout}s")
-            self.buffer += self.socket.recv(4096)
+            self.buffer += self.socket.recv(STANDARD_SOCKET_RECEIVE_SIZE)
         until = list(filter(lambda x: x in self.buffer, until))[0]
         index = self.buffer.index(until) + len(until)
         _res = self.buffer[:index]
@@ -54,7 +54,7 @@ class WrappedSocket:
         Similar to read, but keeps data in buffer.
         """
         while len(self.buffer) < size:
-            self.buffer += self.socket.recv(4096)
+            self.buffer += self.socket.recv(STANDARD_SOCKET_RECEIVE_SIZE)
         return self.buffer[:size]
 
     def recv(self, size: int, *args, **kwargs) -> bytes:
@@ -63,11 +63,14 @@ class WrappedSocket:
         :param size: Size of the buffer to read into.
         :return: Bytes read from the socket
         """
-        if len(self.buffer) > 0:
-            _res = self.buffer
-            self.buffer = b''
-        else:
-            _res = self.socket.recv(size, *args, **kwargs)
+
+        # copy any left bytes from buffer
+        _res = self.buffer[:min(size, len(self.buffer))]
+        self.buffer = self.buffer[min(size, len(self.buffer)):]
+
+        if len(_res) < size:
+            # read rest from socket
+            _res += self.socket.recv(size-len(_res), *args, **kwargs)
         return _res
 
     def send(self, data: bytes, *args, **kwargs) -> int:
@@ -149,13 +152,15 @@ class WrappedSocket:
             self.inject(buffer)
         return message
 
-    def read_http_get(self) -> str:
+    def read_http_get(self) -> (str, int):
         """
         Reads the first line of a http get request to parse the domain from it.
         :return: host in the get request
         """
         found = False
         data = b''
+        port = 80
+        # TODO: rework this to be more robust: check for presence of http:// prefix and GET method
         i = 12  # GET http://
         # increasingly peek until we find the linebreak
         while not found and i < 200:
@@ -165,8 +170,11 @@ class WrappedSocket:
             else:
                 i += 1
         host = data[11:].split(b'/')[0].decode('ASCII')  # cut GET http:// and parse until first slash
+        if ':' in host:
+            host, port = host.split(':')
+            port = int(port)
 
-        return host
+        return host, port
 
     def read_http_connect(self) -> (str, int):
         """
@@ -174,6 +182,7 @@ class WrappedSocket:
         :return: host and port from the http connect request.
         """
         # check if first message is a CONNECT method
+        # TODO change to ascii and compare lower case to be somewhat more robust
         header = b'CONNECT '
         data = self.peek(len(header))
         if data != header:
