@@ -103,8 +103,13 @@ def main():
     if args.forward_proxy_port is not None:
         forward_proxy = NetworkAddress(args.forward_proxy_host, args.forward_proxy_port)
 
+    if args.forward_proxy_mode in [ProxyMode.HTTP, ProxyMode.SNI] and args.forward_proxy_mode != args.proxy_mode:
+        logging.debug("Forward proxy modes HTTP and SNI only usable if proxy mode is HTTP or SNI respectively.")
+        exit()
+
     proxy = Proxy(server_address, args.timeout, args.record_frag, args.tcp_frag, args.frag_size,
-                  args.dot_resolver, args.disabled_modes, forward_proxy, args.forward_proxy_mode, args.forward_proxy_resolve_address)
+                  args.dot_resolver, args.disabled_modes, forward_proxy, args.forward_proxy_mode,
+                  args.forward_proxy_resolve_address)
     proxy.start()
 
 

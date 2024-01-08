@@ -65,14 +65,11 @@ class WrappedSocket:
         :param size: Size of the buffer to read into.
         :return: Bytes read from the socket
         """
-
-        # copy any left bytes from buffer
-        _res = self.buffer[:min(size, len(self.buffer))]
-        self.buffer = self.buffer[min(size, len(self.buffer)):]
-
-        if len(_res) < size:
-            # read rest from socket
-            _res += self.socket.recv(size-len(_res), *args, **kwargs)
+        if len(self.buffer) > 0:
+            _res = self.buffer[:size]
+            self.buffer = self.buffer[size:]
+        else:
+            _res = self.socket.recv(size, *args, **kwargs)
         return _res
 
     def send(self, data: bytes, *args, **kwargs) -> int:

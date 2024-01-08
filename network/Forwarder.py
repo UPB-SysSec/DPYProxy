@@ -17,10 +17,10 @@ class Forwarder:
         self.frag_size = frag_size
 
     def start(self):
-        (threading.Thread(target=self._forward, args=(self.socket1,
-                                                      self.socket2,
-                                                      f"{self.socket1_name}->{self.socket2_name}",
-                                                      self.record_frag)).start())
+        threading.Thread(target=self._forward, args=(self.socket1,
+                                                     self.socket2,
+                                                     f"{self.socket1_name}->{self.socket2_name}",
+                                                     self.record_frag)).start()
         threading.Thread(target=self._forward, args=(self.socket2,
                                                      self.socket1,
                                                      f"{self.socket2_name}->{self.socket1_name}",

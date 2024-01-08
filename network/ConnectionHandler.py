@@ -158,7 +158,7 @@ class ConnectionHandler:
 
     # LOGGER utility functions
     def _logger_string(self, message: str) -> str:
-        return f"{self.address.host}->{self.address.port}: {message}"
+        return f"{self.address.host}:{self.address.port}: {message}"
 
     def debug(self, message: str):
         logging.debug(self._logger_string(message))
