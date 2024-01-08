@@ -7,11 +7,12 @@ from network.DomainResolver import DomainResolver
 from network.Forwarder import Forwarder
 from network.NetworkAddress import NetworkAddress
 from network.WrappedSocket import WrappedSocket
-from network.protocols.http import HttpParser
-from network.protocols.tls import TlsParser
+from network.protocols.http import Http
+from network.protocols.socks import Socks
+from network.protocols.tls import Tls
 from util.Util import is_valid_ipv4_address
-from util.constants import STANDARD_SOCKET_RECEIVE_SIZE, HTTP_200_RESPONSE, TLS_1_0_HEADER, TLS_1_2_HEADER, \
-    TLS_1_1_HEADER
+from util.constants import STANDARD_SOCKET_RECEIVE_SIZE, TLS_1_0_HEADER, TLS_1_2_HEADER, \
+    TLS_1_1_HEADER, SOCKSv4_HEADER
 
 
 class ConnectionHandler:
@@ -55,19 +56,17 @@ class ConnectionHandler:
             self.info(f"Proxy mode {self.proxy_mode} is disabled. Stopping!")
             return
 
-        if self.proxy_mode == ProxyMode.HTTPS:
-            # answer with 200 OK
-            self.connection_socket.send(HTTP_200_RESPONSE)
-
         # determine destination address
         try:
-            final_server_address = self.get_destination_address()
+            final_server_address, http_version = self.get_destination_address()
         except ParserException as e:
             logging.warning(f"Could not parse initial proxy message with {e}. Stopping!")
             return
 
+        self.send_proxy_answer(http_version)
+
         # resolve domain if no forward proxy or the forward proxy needs a resolved address
-        if not is_valid_ipv4_address(final_server_address.host) and \
+        if (not is_valid_ipv4_address(final_server_address.host)) and \
                 (self.forward_proxy_resolve_address or self.forward_proxy is None):
             if self.dot_ip:
                 host = DomainResolver.resolve_over_dot(final_server_address.host, self.dot_ip)
@@ -95,22 +94,8 @@ class ConnectionHandler:
         logging.info(f"Connected {final_server_address.host}:{final_server_address.port} "
                      f"to {target_address[0]}:{target_address[1]}")
 
-        try:
-            # send proxy messages if necessary
-            if self.forward_proxy is not None and self.forward_proxy_mode == ProxyMode.HTTPS:
-                server_socket.send(f'CONNECT {final_server_address.host}:{final_server_address.port} HTTP/1.1\n'
-                                   f'Host: {final_server_address.host}:{final_server_address.port}\n\n'
-                                   .encode('ASCII'))
-                self.debug(f"Send HTTP CONNECT to forward proxy")
-                # receive HTTP 200 OK
-                answer = server_socket.recv(STANDARD_SOCKET_RECEIVE_SIZE)
-                if not answer.upper().startswith(HTTP_200_RESPONSE):
-                    self.debug(f"Forward proxy rejected the connection with {answer}")
-        except:
-            self.debug("Could not send proxy message")
-            self.connection_socket.try_close()
-            logging.info(f"Closed connections")
-            return
+        if self.forward_proxy is not None:
+            self.connect_forward_proxy(server_socket, final_server_address, http_version)
 
         # start proxying
         Forwarder(self.connection_socket, self.address.__str__(), server_socket,
@@ -121,13 +106,20 @@ class ConnectionHandler:
         Determines the mode of the proxy based on the first client message
         """
         header = self.connection_socket.peek(16)
+
+        if header.startswith(TLS_1_0_HEADER) or header.startswith(TLS_1_1_HEADER) \
+                or header.startswith(TLS_1_2_HEADER):
+            self.debug("Determined SNI Proxy Request")
+            return ProxyMode.SNI
+
+        if header.startswith(SOCKSv4_HEADER):
+            self.debug("Determined SOCKSv4 Proxy Request")
+            return ProxyMode.SOCKSv4
+
         try:
             ascii_decoded_header = header.decode('ASCII')
         except UnicodeDecodeError as e:
-            if header.startswith(TLS_1_0_HEADER) or header.startswith(TLS_1_1_HEADER) \
-                    or header.startswith(TLS_1_2_HEADER):
-                self.debug("Determined SNI Proxy Request")
-                return ProxyMode.SNI
+            raise ParserException(f"Could not determine message type of message {header}")
         else:
             if ascii_decoded_header.upper().startswith('GET '):
                 self.debug("Determined HTTP Proxy Request")
@@ -138,23 +130,60 @@ class ConnectionHandler:
 
         raise ParserException(f"Could not determine message type of message {header}")
 
-    def get_destination_address(self) -> NetworkAddress:
+    def get_destination_address(self) -> (NetworkAddress, str):
         """
         Reads a proxy destination address and returns the host and port of the destination.
-        :return: Host and port of the destination server
+        :return: Host, port, and optional http version of the destination server
         """
+        http_version = None
         if self.proxy_mode == ProxyMode.HTTP:
-            host, port = HttpParser.read_http_get(self.connection_socket)
+            host, port, http_version = Http.read_http_get(self.connection_socket)
             self.debug(f"Read host {host} and port {port} from HTTP GET")
         elif self.proxy_mode == ProxyMode.HTTPS:
-            host, port = HttpParser.read_http_connect(self.connection_socket)
+            host, port, http_version = Http.read_http_connect(self.connection_socket)
             self.debug(f"Read host {host} and port {port} from HTTP CONNECT")
         elif self.proxy_mode == ProxyMode.SNI:
-            host, port = TlsParser.read_sni(self.connection_socket, self.timeout), 443
+            host, port = Tls.read_sni(self.connection_socket, self.timeout), 443
             self.debug(f"Read host {host} and port {port} from SNI")
+        elif self.proxy_mode == ProxyMode.SOCKSv4:
+            host, port = Socks.read_socks4(self.connection_socket)
+            self.debug(f"Read host {host} and port {port} from SOCKSv4")
         else:
             raise ParserException("Unknown proxy type")
-        return NetworkAddress(host, port)
+        return NetworkAddress(host, port), http_version
+
+    def send_proxy_answer(self, http_version: str):
+        if self.proxy_mode == ProxyMode.HTTPS:
+            # answer with 200 OK
+            self.connection_socket.send(Http.http_200_ok(http_version))
+        elif self.proxy_mode == ProxyMode.SOCKSv4:
+            # answer with Socksv4 okay
+            self.connection_socket.send(Socks.socks4_ok())
+
+    def connect_forward_proxy(self, server_socket: WrappedSocket,
+                              final_server_address: NetworkAddress,
+                              http_version: str):
+        try:
+            # send proxy messages if necessary
+            if self.forward_proxy_mode == ProxyMode.HTTPS:
+                server_socket.send(Http.connect_message(final_server_address, http_version))
+                self.debug(f"Send HTTP CONNECT to forward proxy")
+                # receive HTTP 200 OK
+                answer = server_socket.recv(STANDARD_SOCKET_RECEIVE_SIZE)
+                if not answer.upper().startswith(Http.http_200_ok(http_version)):
+                    self.debug(f"Forward proxy rejected the connection with {answer}")
+            elif self.forward_proxy == ProxyMode.SOCKSv4:
+                server_socket.send(Socks.socks4_request(final_server_address))
+                self.debug(f"Send SOCKSv4 to forward proxy")
+                # receive SOCKSv4 OK
+                answer = server_socket.recv(STANDARD_SOCKET_RECEIVE_SIZE)
+                if not answer.upper().startswith(Socks.socks4_ok()) and len(answer) != 8:
+                    self.debug(f"Forward proxy rejected the connection with {answer}")
+        except:
+            self.debug("Could not send proxy message")
+            self.connection_socket.try_close()
+            logging.info(f"Closed connections")
+            return
 
     # LOGGER utility functions
     def _logger_string(self, message: str) -> str:

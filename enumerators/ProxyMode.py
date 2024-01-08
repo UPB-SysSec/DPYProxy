@@ -8,8 +8,9 @@ class ProxyMode(Enum):
     HTTP = "HTTP"
     HTTPS = "HTTPS",
     SNI = "SNI"
-    # TODO: SOCKSv4 = "SOCKSv4
-    # TODO: SOCKSv5 = "SOCKSv5
+    SOCKSv4 = "SOCKSv4"
+    SOCKSv4a = "SOCKSv4a"
+    SOCKSv5 = "SOCKSv5"
 
     def __str__(self):
         return self.name

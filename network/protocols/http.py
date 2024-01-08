@@ -1,15 +1,16 @@
 from exception.ParserException import ParserException
+from network.NetworkAddress import NetworkAddress
 from network.WrappedSocket import WrappedSocket
 
 
 # TODO: HTTP/2 support
-class HttpParser:
+class Http:
     """
     Implements methods to parse HTTP messages.
     """
 
     @staticmethod
-    def _parse_http_method(wrapped_socket: WrappedSocket, method: str, peek: bool = False) -> (str, int):
+    def _parse_http_method(wrapped_socket: WrappedSocket, method: str, peek: bool = False) -> (str, int, str):
         """
         Reads the first line of a http method to parse the domain from it.
         :return: host and port in the method, defaults to port 80 if no port found
@@ -32,24 +33,24 @@ class HttpParser:
         _, uri, version = first_line.split(" ")
         if version.upper() != "HTTP/1.1" and version.upper() != "HTTP/1.0" and version.upper() != "HTTP/0.9":
             raise ParserException(f"Not a valid {method} request, only HTTP/0.9 HTTP/1.0, and HTTP/1.1 supported")
-        host, _, port = HttpParser.parse_uri(uri)
-        return host, port
+        host, _, port = Http.parse_uri(uri)
+        return host, port, version
 
     @staticmethod
-    def read_http_get(wrapped_socket: WrappedSocket) -> (str, int):
+    def read_http_get(wrapped_socket: WrappedSocket) -> (str, int, str):
         """
         Reads the first line of a http get request.
-        :return: host and port from the http get request.
+        :return: host, port, and version from the http get request.
         """
-        return HttpParser._parse_http_method(wrapped_socket, "GET", True)
+        return Http._parse_http_method(wrapped_socket, "GET", True)
 
     @staticmethod
-    def read_http_connect(wrapped_socket: WrappedSocket) -> (str, int):
+    def read_http_connect(wrapped_socket: WrappedSocket) -> (str, int, str):
         """
         Reads the first line of a http connect request.
-        :return: host and port from the http connect request.
+        :return: host, port, and http version from the http connect request.
         """
-        return HttpParser._parse_http_method(wrapped_socket, "CONNECT", False)
+        return Http._parse_http_method(wrapped_socket, "CONNECT", False)
 
     @staticmethod
     def parse_uri(uri: str) -> (str, str, int):
@@ -78,3 +79,13 @@ class HttpParser:
             port = 80
 
         return uri, path, port
+
+    @staticmethod
+    def connect_message(server_address: NetworkAddress, version: str) -> bytes:
+        return (f'CONNECT {server_address.host}:{server_address.port} {version}\n'
+                f'Host: {server_address.host}:{server_address.port}\n\n'
+                .encode('ASCII'))
+
+    @staticmethod
+    def http_200_ok(version: str) -> bytes:
+        return f'{version} 200 OK\n\n'.encode("ASCII")

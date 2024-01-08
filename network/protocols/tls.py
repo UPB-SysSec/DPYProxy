@@ -5,7 +5,7 @@ from network.WrappedSocket import WrappedSocket
 from util.constants import TLS_1_0_HEADER, TLS_1_1_HEADER, TLS_1_2_HEADER
 
 
-class TlsParser:
+class Tls:
     @staticmethod
     def read_sni(wrapped_socket: WrappedSocket, timeout: int) -> str:
         """
@@ -14,7 +14,7 @@ class TlsParser:
         """
 
         try:
-            tls_message = TlsParser._read_tls_message(wrapped_socket, peek=True, timeout=timeout)
+            tls_message = Tls._read_tls_message(wrapped_socket, peek=True, timeout=timeout)
         except ParserException as e:
             raise e
         except Exception as e:
@@ -82,7 +82,7 @@ class TlsParser:
         timestamp = time()
         # parse records until message complete
         while len(message) < len_to_read and int(time() - timestamp) < timeout:
-            record = TlsParser._read_tls_record(wrapped_socket)
+            record = Tls._read_tls_record(wrapped_socket)
             buffer += record
             message += record[5:]
             if len(message) >= 4:
