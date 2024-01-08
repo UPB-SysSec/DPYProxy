@@ -1,11 +1,14 @@
 import logging
 import socket
-import threading
 
 from enumerators.ProxyMode import ProxyMode
 from exception.ParserException import ParserException
+from network.DomainResolver import DomainResolver
+from network.Forwarder import Forwarder
 from network.NetworkAddress import NetworkAddress
 from network.WrappedSocket import WrappedSocket
+from network.protocols.http import HttpParser
+from network.protocols.tls import TlsParser
 from util.Util import is_valid_ipv4_address
 from util.constants import STANDARD_SOCKET_RECEIVE_SIZE, HTTP_200_RESPONSE, TLS_1_0_HEADER, TLS_1_2_HEADER, \
     TLS_1_1_HEADER
@@ -64,19 +67,21 @@ class ConnectionHandler:
             return
 
         # resolve domain if no forward proxy or the forward proxy needs a resolved address
-        # TODO: continue here
         if not is_valid_ipv4_address(final_server_address.host) and \
                 (self.forward_proxy_resolve_address or self.forward_proxy is None):
-            _host = host
-            host = self.resolve_domain(host)
-            Proxy.debug(f"Resolved {host} from {_host}", f"{address[0]}:{address[1]}")
+            if self.dot_ip:
+                host = DomainResolver.resolve_over_dot(final_server_address.host, self.dot_ip)
+            else:
+                host = DomainResolver.resolve_plain(final_server_address.host)
+            self.debug(f"Resolved {host} from {final_server_address.host}")
+            final_server_address.host = host
 
         # set correct target
         if self.forward_proxy is None:
-            target_address = (host, port)
+            target_address = (final_server_address.host, final_server_address.port)
         else:
             target_address = (self.forward_proxy.host, self.forward_proxy.port)
-            Proxy.debug(f"Using forward proxy {target_address}", f"{address[0]}:{address[1]}")
+            self.debug(f"Using forward proxy {target_address}")
 
         # open socket to server
         server_socket = socket.create_connection(target_address)
@@ -87,35 +92,29 @@ class ConnectionHandler:
             server_socket = WrappedSocket(self.timeout, server_socket, self.frag_size)
         else:
             server_socket = WrappedSocket(self.timeout, server_socket)
-        logging.info(f"Connected {address[0]}:{address[1]} to {target_address[0]}:{target_address[1]}")
+        logging.info(f"Connected {final_server_address.host}:{final_server_address.port} "
+                     f"to {target_address[0]}:{target_address[1]}")
 
         try:
             # send proxy messages if necessary
-            # TODO: also support proxy authentication?
-            if self.forward_proxy is not None and self.forward_proxy.mode == ProxyMode.HTTPS \
-                    and needs_proxy_message:
-                server_socket.send(f'CONNECT {host}:{port} HTTP/1.1\nHost: {host}:{port}\n\n'
+            if self.forward_proxy is not None and self.forward_proxy_mode == ProxyMode.HTTPS:
+                server_socket.send(f'CONNECT {final_server_address.host}:{final_server_address.port} HTTP/1.1\n'
+                                   f'Host: {final_server_address.host}:{final_server_address.port}\n\n'
                                    .encode('ASCII'))
-                Proxy.debug(f"Send HTTP CONNECT to forward proxy", f"{address[0]}:{address[1]}")
+                self.debug(f"Send HTTP CONNECT to forward proxy")
                 # receive HTTP 200 OK
                 answer = server_socket.recv(STANDARD_SOCKET_RECEIVE_SIZE)
-                if not answer.startswith(HTTP_200_RESPONSE):
-                    Proxy.debug(f"Forward proxy rejected the connection with {answer}", f"{address[0]}:{address[1]}")
+                if not answer.upper().startswith(HTTP_200_RESPONSE):
+                    self.debug(f"Forward proxy rejected the connection with {answer}")
         except:
-            Proxy.debug("Could not send proxy message", f"{address[0]}:{address[1]}")
-            client_socket.try_close()
-            logging.info(f"Closed connections of {address[0]}:{address[1]}")
+            self.debug("Could not send proxy message")
+            self.connection_socket.try_close()
+            logging.info(f"Closed connections")
             return
 
         # start proxying
-        (threading.Thread(target=self.forward, args=(client_socket,
-                                                     server_socket,
-                                                     f"{address[0]}:{address[1]}->{target_address[0]}:{target_address[1]}",
-                                                     self.record_frag)).start())
-        threading.Thread(target=self.forward, args=(server_socket,
-                                                    client_socket,
-                                                    f"{target_address[0]}:{target_address[1]}->{address[0]}:{address[1]}",
-                                                    )).start()
+        Forwarder(self.connection_socket, self.address.__str__(), server_socket,
+                  f"{target_address[0]}:{target_address[1]}", self.record_frag, self.frag_size).start()
 
     def get_proxy_mode(self) -> ProxyMode:
         """
@@ -145,20 +144,20 @@ class ConnectionHandler:
         :return: Host and port of the destination server
         """
         if self.proxy_mode == ProxyMode.HTTP:
-            host, port = self.connection_socket.read_http_get()
+            host, port = HttpParser.read_http_get(self.connection_socket)
             self.debug(f"Read host {host} and port {port} from HTTP GET")
         elif self.proxy_mode == ProxyMode.HTTPS:
-            host, port = self.connection_socket.read_http_connect()
+            host, port = HttpParser.read_http_connect(self.connection_socket)
             self.debug(f"Read host {host} and port {port} from HTTP CONNECT")
         elif self.proxy_mode == ProxyMode.SNI:
-            host, port = self.connection_socket.read_sni(), 443
+            host, port = TlsParser.read_sni(self.connection_socket, self.timeout), 443
             self.debug(f"Read host {host} and port {port} from SNI")
         else:
             raise ParserException("Unknown proxy type")
         return NetworkAddress(host, port)
 
     # LOGGER utility functions
-    def _logger_string(self, message) -> str:
+    def _logger_string(self, message: str) -> str:
         return f"{self.address.host}->{self.address.port}: {message}"
 
     def debug(self, message: str):

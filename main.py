@@ -104,7 +104,7 @@ def main():
         forward_proxy = NetworkAddress(args.forward_proxy_host, args.forward_proxy_port)
 
     proxy = Proxy(server_address, args.timeout, args.record_frag, args.tcp_frag, args.frag_size,
-                  args.dot_resolver, forward_proxy, args.forwarward_proxy_mode, args.forward_proxy_resolve_address)
+                  args.dot_resolver, args.disabled_modes, forward_proxy, args.forward_proxy_mode, args.forward_proxy_resolve_address)
     proxy.start()
 
 
