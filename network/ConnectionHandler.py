@@ -83,7 +83,11 @@ class ConnectionHandler:
             self.debug(f"Using forward proxy {target_address}")
 
         # open socket to server
-        server_socket = socket.create_connection(target_address)
+        try:
+            server_socket = socket.create_connection(target_address)
+        except Exception as e:
+            self.info(f"Could not connect to server due to {e}.")
+            self.connection_socket.try_close()
         if self.tcp_frag and self.record_frag:
             # align record and tcp fragment size
             server_socket = WrappedSocket(self.timeout, server_socket, self.frag_size + 5)
