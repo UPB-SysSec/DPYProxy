@@ -5,7 +5,7 @@ from util.constants import SOCKSv4_HEADER
 from util.Util import is_valid_ipv4_address
 
 
-class Socks:
+class Socksv4:
     """
     Implements SOCKSv4a protocol
     """
@@ -21,9 +21,9 @@ class Socks:
             raise ParserException("Not a SOCKSv4 request")
 
         mode = connection_socket.recv(1)
-        if mode == Socks.BIND_MODE:
+        if mode == Socksv4.BIND_MODE:
             raise ParserException("BIND mode not supported")
-        if mode != Socks.REQUEST_MODE:
+        if mode != Socksv4.REQUEST_MODE:
             raise ParserException(f"Socks mode {mode} not supported")
 
         port = int.from_bytes(connection_socket.recv(2), byteorder='big')

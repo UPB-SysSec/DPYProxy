@@ -8,11 +8,12 @@ from network.Forwarder import Forwarder
 from network.NetworkAddress import NetworkAddress
 from network.WrappedSocket import WrappedSocket
 from network.protocols.http import Http
-from network.protocols.socks import Socks
+from network.protocols.socksv4 import Socksv4
+from network.protocols.socksv5 import Socksv5
 from network.protocols.tls import Tls
 from util.Util import is_valid_ipv4_address
 from util.constants import STANDARD_SOCKET_RECEIVE_SIZE, TLS_1_0_HEADER, TLS_1_2_HEADER, \
-    TLS_1_1_HEADER, SOCKSv4_HEADER
+    TLS_1_1_HEADER, SOCKSv4_HEADER, SOCKSv5_HEADER
 
 
 class ConnectionHandler:
@@ -63,8 +64,6 @@ class ConnectionHandler:
             logging.warning(f"Could not parse initial proxy message with {e}. Stopping!")
             return
 
-        self.send_proxy_answer(http_version)
-
         # resolve domain if no forward proxy or the forward proxy needs a resolved address
         if (not is_valid_ipv4_address(final_server_address.host)) and \
                 (self.forward_proxy_resolve_address or self.forward_proxy is None):
@@ -88,6 +87,7 @@ class ConnectionHandler:
         except Exception as e:
             self.info(f"Could not connect to server due to {e}.")
             self.connection_socket.try_close()
+            return
         if self.tcp_frag and self.record_frag:
             # align record and tcp fragment size
             server_socket = WrappedSocket(self.timeout, server_socket, self.frag_size + 5)
@@ -97,6 +97,8 @@ class ConnectionHandler:
             server_socket = WrappedSocket(self.timeout, server_socket)
         logging.info(f"Connected {final_server_address.host}:{final_server_address.port} "
                      f"to {target_address[0]}:{target_address[1]}")
+
+        self.send_proxy_answer(http_version, server_socket)
 
         if self.forward_proxy is not None:
             self.connect_forward_proxy(server_socket, final_server_address, http_version)
@@ -119,6 +121,10 @@ class ConnectionHandler:
         if header.startswith(SOCKSv4_HEADER):
             self.debug("Determined SOCKSv4 Proxy Request")
             return ProxyMode.SOCKSv4
+
+        if header.startswith(SOCKSv5_HEADER):
+            self.debug("Determined SOCKSv5 Proxy Request")
+            return ProxyMode.SOCKSv5
 
         try:
             ascii_decoded_header = header.decode('ASCII')
@@ -150,19 +156,24 @@ class ConnectionHandler:
             host, port = Tls.read_sni(self.connection_socket, self.timeout), 443
             self.debug(f"Read host {host} and port {port} from SNI")
         elif self.proxy_mode == ProxyMode.SOCKSv4:
-            host, port = Socks.read_socks4(self.connection_socket)
+            host, port = Socksv4.read_socks4(self.connection_socket)
             self.debug(f"Read host {host} and port {port} from SOCKSv4")
+        elif self.proxy_mode == ProxyMode.SOCKSv5:
+            host, port = Socksv5.read_socks5(self.connection_socket)
         else:
             raise ParserException("Unknown proxy type")
         return NetworkAddress(host, port), http_version
 
-    def send_proxy_answer(self, http_version: str):
+    def send_proxy_answer(self, http_version: str, server_socket: WrappedSocket):
         if self.proxy_mode == ProxyMode.HTTPS:
             # answer with 200 OK
             self.connection_socket.send(Http.http_200_ok(http_version))
         elif self.proxy_mode == ProxyMode.SOCKSv4:
             # answer with Socksv4 okay
-            self.connection_socket.send(Socks.socks4_ok())
+            self.connection_socket.send(Socksv4.socks4_ok())
+        elif self.proxy_mode == ProxyMode.SOCKSv5:
+            # answer with Socksv5 okay
+            self.connection_socket.send(Socksv5.socks5_ok(server_socket))
 
     def connect_forward_proxy(self, server_socket: WrappedSocket,
                               final_server_address: NetworkAddress,
@@ -171,17 +182,33 @@ class ConnectionHandler:
             # send proxy messages if necessary
             if self.forward_proxy_mode == ProxyMode.HTTPS:
                 server_socket.send(Http.connect_message(final_server_address, http_version))
-                self.debug(f"Send HTTP CONNECT to forward proxy")
+                self.debug(f"Sent HTTP CONNECT to forward proxy")
                 # receive HTTP 200 OK
                 answer = server_socket.recv(STANDARD_SOCKET_RECEIVE_SIZE)
                 if not answer.upper().startswith(Http.http_200_ok(http_version)):
-                    self.debug(f"Forward proxy rejected the connection with {answer}")
+                    raise ParserException(f"Forward proxy rejected the connection with {answer}")
+
             elif self.forward_proxy == ProxyMode.SOCKSv4:
-                server_socket.send(Socks.socks4_request(final_server_address))
-                self.debug(f"Send SOCKSv4 to forward proxy")
+                server_socket.send(Socksv4.socks4_request(final_server_address))
+                self.debug(f"Sent SOCKSv4 to forward proxy")
                 # receive SOCKSv4 OK
                 answer = server_socket.recv(STANDARD_SOCKET_RECEIVE_SIZE)
-                if not answer.upper().startswith(Socks.socks4_ok()) and len(answer) != 8:
+                if not answer.upper().startswith(Socksv4.socks4_ok()) and len(answer) != 8:
+                    raise ParserException(f"Forward proxy rejected the connection with {answer}")
+
+            elif self.forward_proxy == ProxyMode.SOCKSv5:
+                server_socket.send(Socksv5.socks5_auth_methods())
+                self.debug("Sent SOCKSv5 auth methods")
+                answer = server_socket.recv(2)
+                if answer == b'\x05\xFF':
+                    raise ParserException("Forward proxy does not support no auth")
+                if answer != b'\x05\x00':
+                    raise ParserException(f"Forward proxy rejected the connection with {answer}")
+                server_socket.send(Socksv5.socks5_request(final_server_address))
+                self.debug(f"Sent SOCKSv5 to forward proxy")
+                # receive SOCKSv5 OK
+                answer = server_socket.recv(STANDARD_SOCKET_RECEIVE_SIZE)
+                if not answer.upper().startswith(Socksv5.socks5_ok(server_socket)):
                     self.debug(f"Forward proxy rejected the connection with {answer}")
         except:
             self.debug("Could not send proxy message")
