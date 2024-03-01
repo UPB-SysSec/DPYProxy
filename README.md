@@ -14,7 +14,8 @@ separate proxy for IP censorship circumvention.
   - `sudo apt install python3`
 - dnspython (if the dot setting is used)
   - `pip3 install -r requirements.txt`
-
+- docker (if you want to run DPYProxy in a container)
+  - https://docs.docker.com/engine/install/
 # Usage
 
 ```
@@ -131,6 +132,16 @@ curl -p -x localhost:4433 https://www.wikipedia.org
 ```
 
 using some kind of capturing tool like wireshark you can inspect the fragmented TLS records and TCP segments.
+
+# Docker
+
+You can run DPYProxy in a Docker container. A standard setting is provided in the `docker-compose.yml` file. You can
+also build the image yourself using the provided `Dockerfile` or change the parameters in the `docker-compose.yml` file.
+
+Start the container with 
+```sh
+docker-compose up
+```
 
 # Roadmap
 
