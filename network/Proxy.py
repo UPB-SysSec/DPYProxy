@@ -78,4 +78,4 @@ class Proxy:
             client_socket = WrappedSocket(self.timeout, client_socket)
             logging.info(f"request from {address.host}:{address.port}")
             # spawn a new thread that runs the function handle()
-            threading.Thread(self.handle(client_socket, address), args=(client_socket, address)).start()
+            threading.Thread(target=self.handle, args=(client_socket, address)).start()

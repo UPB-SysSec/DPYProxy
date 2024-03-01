@@ -52,7 +52,7 @@ class ConnectionHandler:
         :return: None
         """
         # determine proxy mode / message type
-        self.proxy_mode = self.get_proxy_mode()
+        self.proxy_mode = self. get_proxy_mode()
         if self.proxy_mode in self.disabled_modes:
             self.info(f"Proxy mode {self.proxy_mode} is disabled. Stopping!")
             return
@@ -131,14 +131,13 @@ class ConnectionHandler:
         except UnicodeDecodeError as e:
             raise ParserException(f"Could not determine message type of message {header}")
         else:
-            if ascii_decoded_header.upper().startswith('GET'):
-                self.debug("Determined HTTP Proxy Request")
-                return ProxyMode.HTTP
-            elif ascii_decoded_header.upper().startswith('CON'):
+            if ascii_decoded_header.upper().startswith('CON'):
                 self.debug("Determined HTTPS Proxy Request")
                 return ProxyMode.HTTPS
-
-        raise ParserException(f"Could not determine message type of message {header}")
+            else:
+                # assume we have http
+                self.debug("Determined HTTP Proxy Request")
+                return ProxyMode.HTTP
 
     def get_destination_address(self) -> (NetworkAddress, str):
         """
