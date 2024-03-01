@@ -1,0 +1,11 @@
+version: '2'
+
+services:
+  dpyproxy:
+    ports:
+      - "127.0.0.1:4433:4433"
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    command: ["--frag_size", "20", "--debug", "--port", "4433", "--host", "0.0.0.0"]

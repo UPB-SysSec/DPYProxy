@@ -20,5 +20,5 @@ RUN pip install -r requirements.txt
 
 
 # Run the web service on container startup.
-# Change the CMD to run a different experiment.
-CMD python3 main.py --record_frag --tcp_frag --frag_size 20 --port 4433 
+# Change parameters in docker-compose.yml
+ENTRYPOINT ["python3", "main.py"]
