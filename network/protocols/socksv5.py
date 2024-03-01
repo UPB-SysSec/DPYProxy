@@ -87,13 +87,12 @@ class Socksv5:
     @staticmethod
     def socks5_request(server_address: NetworkAddress):
         if not is_valid_ipv4_address(server_address.host):
-            # Socksv5 domain encoding
-            return SOCKSv4_HEADER + b'\x01' + server_address.port.to_bytes(2, byteorder='big') + \
-                    "0.0.0.1".encode("'utf-8") + b'\x00' + server_address.host.encode('utf-8') + b'\x00'
+            domain = server_address.host.encode('utf-8')
+            address = b'\0x03' + len(domain).to_bytes() + domain
         else:
-            # Socksv4 ip encoding
-            return SOCKSv4_HEADER + b'\x01' + server_address.port.to_bytes(2, byteorder='big') + \
-               bytes([int(i) for i in server_address.host.split('.')]) + b'\x00'
+            address = b'\0x01' + socket.inet_aton(server_address.host)
+        return (SOCKSv5_HEADER + b'\x01' + Socksv5.RESERVED_BYTE + address
+                + server_address.port.to_bytes(2, byteorder='big'))
 
     @staticmethod
     def socks5_ok(connection_socket: WrappedSocket) -> bytes:
