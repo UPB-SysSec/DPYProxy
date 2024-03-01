@@ -111,7 +111,7 @@ class ConnectionHandler:
         """
         Determines the mode of the proxy based on the first client message
         """
-        header = self.connection_socket.peek(16)
+        header = self.connection_socket.peek(3)
 
         if header.startswith(TLS_1_0_HEADER) or header.startswith(TLS_1_1_HEADER) \
                 or header.startswith(TLS_1_2_HEADER):
@@ -131,10 +131,10 @@ class ConnectionHandler:
         except UnicodeDecodeError as e:
             raise ParserException(f"Could not determine message type of message {header}")
         else:
-            if ascii_decoded_header.upper().startswith('GET '):
+            if ascii_decoded_header.upper().startswith('GET'):
                 self.debug("Determined HTTP Proxy Request")
                 return ProxyMode.HTTP
-            elif ascii_decoded_header.upper().startswith('CONNECT '):
+            elif ascii_decoded_header.upper().startswith('CON'):
                 self.debug("Determined HTTPS Proxy Request")
                 return ProxyMode.HTTPS
 

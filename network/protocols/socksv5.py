@@ -26,7 +26,7 @@ class Socksv5:
         if version != SOCKSv5_HEADER:
             raise ParserException("Not a SOCKSv4 request")
 
-        number_authentication_methods = int.from_bytes(connection_socket.recv(1))
+        number_authentication_methods = int.from_bytes(connection_socket.recv(1), byteorder='big')
         if number_authentication_methods == 0:
             connection_socket.send(SOCKSv5_HEADER + b'\xFF')
             raise ParserException("No auth method provided")
@@ -97,5 +97,5 @@ class Socksv5:
     @staticmethod
     def socks5_ok(connection_socket: WrappedSocket) -> bytes:
         host_ip, host_port = connection_socket.socket.getsockname()
-        host_address = socket.inet_aton(host_ip)
-        return SOCKSv5_HEADER + '\x00' + Socksv5.RESERVED_BYTE + host_address + host_port.to_bytes(2, byteorder='big')
+        host_address = b'\x01' + socket.inet_aton(host_ip)
+        return SOCKSv5_HEADER + b'\x00' + Socksv5.RESERVED_BYTE + host_address + host_port.to_bytes(2, byteorder='big')
