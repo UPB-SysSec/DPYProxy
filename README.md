@@ -151,11 +151,12 @@ functionality of DPYProxy is currently limited. Below, I gathered some potential
 ## Implemented
 - [x] HTTP Connect Proxy
 - [x] SNI Proxy
+- [x] Socksv4/Sockv5 proxy
 - [x] TLS record fragmentation
 - [x] TCP Fragmentation
 
 ## Todo
-- [ ] SOCKSv4/5 Proxy
 - [ ] HTTP shenanigans
 - [ ] unit tests...
-- [ ] sophisticated forwarding mechanism
+- [ ] DNS
+- [ ] IPv6
