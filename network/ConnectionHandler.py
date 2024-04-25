@@ -11,7 +11,7 @@ from network.protocols.http import Http
 from network.protocols.socksv4 import Socksv4
 from network.protocols.socksv5 import Socksv5
 from network.protocols.tls import Tls
-from util.Util import is_valid_ipv4_address
+from util.Util import is_valid_ip_address
 from util.constants import STANDARD_SOCKET_RECEIVE_SIZE, TLS_1_0_HEADER, TLS_1_2_HEADER, \
     TLS_1_1_HEADER, SOCKSv4_HEADER, SOCKSv5_HEADER
 
@@ -65,7 +65,7 @@ class ConnectionHandler:
             return
 
         # resolve domain if no forward proxy or the forward proxy needs a resolved address
-        if (not is_valid_ipv4_address(final_server_address.host)) and \
+        if (not is_valid_ip_address(final_server_address.host)) and \
                 (self.forward_proxy_resolve_address or self.forward_proxy is None):
             if self.dot_ip:
                 host = DomainResolver.resolve_over_dot(final_server_address.host, self.dot_ip)

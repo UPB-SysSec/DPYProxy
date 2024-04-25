@@ -14,7 +14,7 @@ class DomainResolver:
         """
         Resolves the given domain to an ip address using the system's DNS resolver.
         """
-        return socket.gethostbyname(domain)
+        return socket.getaddrinfo(domain, None)[0][4][0]
 
     @staticmethod
     def resolve_over_dot(domain: str, dns_resolver: str) -> str:
@@ -28,6 +28,8 @@ class DomainResolver:
         if not domain.is_absolute():
             domain = domain.concatenate(dns.name.root)
 
+        # for now assume that all servers still have ipv6
+        # TODO: make this configurable
         query = dns.message.make_query(domain, dns.rdatatype.A)
         query.flags |= dns.flags.AD
         query.find_rrset(query.additional, dns.name.root, 65535,
