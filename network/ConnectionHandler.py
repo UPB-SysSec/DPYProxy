@@ -1,6 +1,7 @@
 import logging
 import socket
 
+from enumerators.NetworkType import NetworkType
 from enumerators.ProxyMode import ProxyMode
 from exception.ParserException import ParserException
 from network.DomainResolver import DomainResolver
@@ -11,7 +12,7 @@ from network.protocols.http import Http
 from network.protocols.socksv4 import Socksv4
 from network.protocols.socksv5 import Socksv5
 from network.protocols.tls import Tls
-from util.Util import is_valid_ip_address
+from util.Util import is_valid_ip_address, is_valid_ipv4_address, is_valid_ipv6_address
 from util.constants import STANDARD_SOCKET_RECEIVE_SIZE, TLS_1_0_HEADER, TLS_1_2_HEADER, \
     TLS_1_1_HEADER, SOCKSv4_HEADER, SOCKSv5_HEADER
 
@@ -29,6 +30,7 @@ class ConnectionHandler:
                  tcp_frag: bool,
                  frag_size: int,
                  dot_ip: str,
+                 network_type: NetworkType,
                  disabled_modes: list[ProxyMode],
                  forward_proxy: NetworkAddress,
                  forward_proxy_mode: ProxyMode,
@@ -41,6 +43,7 @@ class ConnectionHandler:
         self.tcp_frag = tcp_frag
         self.frag_size = frag_size
         self.dot_ip = dot_ip
+        self.network_type = network_type
         self.disabled_modes = disabled_modes
         self.forward_proxy = forward_proxy
         self.forward_proxy_mode = forward_proxy_mode
@@ -80,6 +83,17 @@ class ConnectionHandler:
         else:
             target_address = (self.forward_proxy.host, self.forward_proxy.port)
             self.debug(f"Using forward proxy {target_address}")
+
+        # check if derived ip clashes with ip preferences
+        if self.network_type == NetworkType.IPV4 and not is_valid_ipv4_address(target_address[0]):
+            self.error(f"Resolved address {final_server_address.host} is not a valid ipv4 address. Stopping!")
+            return
+        elif self.network_type == NetworkType.IPV6 and not is_valid_ipv6_address(target_address[0]):
+            self.error(f"Resolved address {final_server_address.host} is not a valid ipv6 address. Stopping!")
+            return
+        elif not is_valid_ip_address(target_address[0]):
+            self.error(f"Resolved address {final_server_address.host} is not a valid ip address. Stopping!")
+            return
 
         # open socket to server
         try:

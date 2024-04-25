@@ -3,6 +3,7 @@ import sys
 
 import argparse
 
+from enumerators.NetworkType import NetworkType
 from enumerators.ProxyMode import ProxyMode
 from network.Proxy import Proxy
 from network.NetworkAddress import NetworkAddress
@@ -30,7 +31,7 @@ def initialize_parser():
     parser.add_argument('--disabled_modes', type=list_of_modes,
                         choices=ProxyMode,
                         default=[],
-                        help='List of proxy modes to ignore. By default, all none are disabled. Hence, all are enabled')
+                        help='List of proxy modes to ignore. By default, none are disabled. Hence, all are enabled')
 
     parser.add_argument('--timeout', type=int,
                         default=120,
@@ -61,6 +62,14 @@ def initialize_parser():
     parser.add_argument('--dot_resolver', type=str,
                         default=None,
                         help='DNS server ip for DNS over TLS')
+
+    parser.add_argument('--force_ipv6', type=bool,
+                        default=False,
+                        help='Force IPv6 when connecting to other servers')
+
+    parser.add_argument('--force_ipv4', type=bool,
+                        default=False,
+                        help='Force IPv4 when connecting to other servers')
 
     parser.add_argument_group('Forward proxy arguments')
 
@@ -103,13 +112,23 @@ def main():
     if args.forward_proxy_port is not None:
         forward_proxy = NetworkAddress(args.forward_proxy_host, args.forward_proxy_port)
 
+    if args.force_ipv4 and args.force_ipv6:
+        logging.debug("Cannot force both ipv4 and ipv6.")
+        exit()
+    elif args.force_ipv4:
+        domain_resolution = NetworkType.IPV4
+    elif args.force_ipv6:
+        domain_resolution = NetworkType.IPV6
+    else:
+        domain_resolution = NetworkType.DUAL_STACK
+
     if args.forward_proxy_mode in [ProxyMode.HTTP, ProxyMode.SNI] and args.forward_proxy_mode != args.proxy_mode:
         logging.debug("Forward proxy modes HTTP and SNI only usable if proxy mode is HTTP or SNI respectively.")
         exit()
 
     proxy = Proxy(server_address, args.timeout, args.record_frag, args.tcp_frag, args.frag_size,
-                  args.dot_resolver, args.disabled_modes, forward_proxy, args.forward_proxy_mode,
-                  args.forward_proxy_resolve_address)
+                  args.dot_resolver, domain_resolution, args.disabled_modes, forward_proxy,
+                  args.forward_proxy_mode, args.forward_proxy_resolve_address)
     proxy.start()
 
 
