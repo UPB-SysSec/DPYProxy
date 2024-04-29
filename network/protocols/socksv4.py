@@ -1,8 +1,10 @@
+import logging
+
 from exception.ParserException import ParserException
 from network.NetworkAddress import NetworkAddress
 from network.WrappedSocket import WrappedSocket
 from util.constants import SOCKSv4_HEADER
-from util.Util import is_valid_ipv4_address
+from util.Util import is_valid_ipv4_address, is_valid_ipv6_address
 
 
 class Socksv4:
@@ -44,14 +46,18 @@ class Socksv4:
 
     @staticmethod
     def socks4_request(server_address: NetworkAddress):
-        if not is_valid_ipv4_address(server_address.host):
-            # Socksv4a domain encoding
-            return SOCKSv4_HEADER + b'\x01' + server_address.port.to_bytes(2, byteorder='big') + \
-                    "0.0.0.1".encode("'utf-8") + b'\x00' + server_address.host.encode('utf-8') + b'\x00'
-        else:
+        if is_valid_ipv4_address(server_address.host):
             # Socksv4 ip encoding
             return SOCKSv4_HEADER + b'\x01' + server_address.port.to_bytes(2, byteorder='big') + \
-               bytes([int(i) for i in server_address.host.split('.')]) + b'\x00'
+                bytes([int(i) for i in server_address.host.split('.')]) + b'\x00'
+            # ipv6 not supported in SOCKSv4a
+        elif is_valid_ipv6_address(server_address.host):
+            logging.warning("IPv6 not supported by SOCKSv4, use domain encoding or SOCKSv5 instead")
+            raise ValueError("IPv6 not supported by SOCKSv4, use domain encoding or SOCKSv5 instead")
+        else:
+            # Socksv4a domain encoding
+            return SOCKSv4_HEADER + b'\x01' + server_address.port.to_bytes(2, byteorder='big') + \
+                "0.0.0.1".encode("'utf-8") + b'\x00' + server_address.host.encode('utf-8') + b'\x00'
 
     @staticmethod
     def socks4_ok() -> bytes:

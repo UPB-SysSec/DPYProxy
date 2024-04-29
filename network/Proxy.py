@@ -2,11 +2,11 @@ import logging
 import socket
 import threading
 
+from enumerators.NetworkType import NetworkType
 from enumerators.ProxyMode import ProxyMode
 from network.ConnectionHandler import ConnectionHandler
 from network.NetworkAddress import NetworkAddress
 from network.WrappedSocket import WrappedSocket
-from util.constants import TLS_1_0_HEADER, TLS_1_2_HEADER, TLS_1_1_HEADER, STANDARD_SOCKET_RECEIVE_SIZE
 
 
 class Proxy:
@@ -20,6 +20,7 @@ class Proxy:
                  tcp_frag: bool = False,
                  frag_size: int = 20,
                  dot_ip: str = "8.8.4.4",
+                 network_type: NetworkType = NetworkType.DUAL_STACK,
                  disabled_modes: list[ProxyMode] = None,
                  forward_proxy: NetworkAddress = None,
                  forward_proxy_mode: ProxyMode = ProxyMode.HTTPS,
@@ -34,6 +35,7 @@ class Proxy:
         self.frag_size = frag_size
         # whether to use dot for domain resolution
         self.dot_ip = dot_ip
+        self.network_type = network_type
         self.disabled_modes = disabled_modes
         if self.disabled_modes is None:
             self.disabled_modes = []
@@ -53,6 +55,7 @@ class Proxy:
             self.tcp_frag,
             self.frag_size,
             self.dot_ip,
+            self.network_type,
             self.disabled_modes,
             self.forward_proxy,
             self.forward_proxy_mode,
