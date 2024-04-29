@@ -101,6 +101,7 @@ class Socksv5:
 
     @staticmethod
     def socks5_ok(connection_socket: WrappedSocket) -> bytes:
+        # TODO: only ipv4
         host_ip, host_port = connection_socket.socket.getsockname()
         host_address = b'\x01' + socket.inet_aton(host_ip)
         return SOCKSv5_HEADER + b'\x00' + Socksv5.RESERVED_BYTE + host_address + host_port.to_bytes(2, byteorder='big')
