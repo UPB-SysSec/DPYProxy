@@ -21,36 +21,38 @@ separate proxy for IP censorship circumvention.
 ```
 python3 main.py -h
       
-usage: main.py [-h] [--setting SETTING] [--debug | --no-debug] [--proxy_mode {ALL,HTTP,HTTPS,SNI}] [--timeout TIMEOUT] [--port PORT] [--record_frag | --no-record_frag] [--tcp_frag | --no-tcp_frag] [--frag_size FRAG_SIZE] [--dot | --no-dot] [--dot_resolver DOT_RESOLVER]
-               [--forward_proxy_address FORWARD_PROXY_ADDRESS] [--forward_proxy_port FORWARD_PROXY_PORT] [--forward_proxy_mode {ALL,HTTP,HTTPS,SNI}] [--forward_proxy_resolve_address | --no-forward_proxy_resolve_address]
+usage: main.py [options]
 
-Optional app description
+Proxy for circumventing DPI-based censorship.
 
-options:
-  -h, --help            show this help message and exit
-  --setting SETTING     Fast setting for proxy setup.
-  --debug, --no-debug   Turns on debugging (default: False)
-  --proxy_mode {ALL,HTTP,HTTPS,SNI}
-                        Which type of proxy to run
+Standard options:
+  -h, --help            Show this help message and exit
+  --debug, --no-debug   Turns on debugging
+  --disabled_modes {HTTP,HTTPS,SNI,SOCKSv4,SOCKSv4a,SOCKSv5}
+                        List of proxy modes to ignore. By default, all none are disabled. Hence, all are enabled
   --timeout TIMEOUT     Connection timeout in seconds
+  --host HOST           Address the proxy server runs on
   --port PORT           Port the proxy server runs on
+
+Circumvention options:
   --record_frag, --no-record_frag
-                        Whether to use record fragmentation to forwarded tls handshake messages (default: False)
+                        Whether to use record fragmentation to forwarded TLS handshake messages
   --tcp_frag, --no-tcp_frag
-                        Whether to use tcp fragmentation to forwarded messages. (default: False)
+                        Whether to use TCP fragmentation to forwarded messages.
   --frag_size FRAG_SIZE
-                        Bytes in each tpc/ tls record fragment
-  --dot, --no-dot       Whether to use dot for address resolution (default: False)
+                        Bytes in each TCP/TLS record fragment
   --dot_resolver DOT_RESOLVER
-                        DNS server ip for DNS over TLS
-  --forward_proxy_address FORWARD_PROXY_ADDRESS
-                        Address of the forward proxy if any is present
+                        DNS server IP for DNS over TLS
+
+Forward proxy options:
+  --forward_proxy_host FORWARD_PROXY_HOST
+                        Host of the forward proxy if any is present
   --forward_proxy_port FORWARD_PROXY_PORT
                         Port the forward proxy server runs on
-  --forward_proxy_mode {ALL,HTTP,HTTPS,SNI}
+  --forward_proxy_mode {HTTP,HTTPS,SNI,SOCKSv4,SOCKSv4a,SOCKSv5}
                         The proxy type of the forward proxy
   --forward_proxy_resolve_address, --no-forward_proxy_resolve_address
-                        Whether to resolve domain before including it in eventual HTTP CONNECT request to second proxy (default: False)
+                        Whether to resolve domains before including them in the HTTP CONNECT request to the second proxy
 ```
 
 ## Settings
