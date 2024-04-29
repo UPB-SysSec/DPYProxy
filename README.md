@@ -55,7 +55,7 @@ options:
 
 ## Settings
 
-### -- debug
+### --debug
 Turns on debugging statements.
 
 ### --proxy_mode
@@ -91,7 +91,7 @@ server. By enabling this option, DPYProxy uses DNS over TLS to resolve the domai
 the --dot-resolver argument.
 
 ### --dot-resolver
-The IP address of the DNS server to use for DNS over TLS. The default is Cloudflare's primary DNS server `1.1.1.1`.
+The IP address of the DNS server to use for DNS over TLS. The default is Google Public DNS (`8.8.4.4`).
 
 ### --forward_proxy_...
 You can specify a forward proxy for IP censorship circumvention. DPYProxy will forward any message it receives to the 
