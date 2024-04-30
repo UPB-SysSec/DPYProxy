@@ -52,7 +52,7 @@ class ConnectionHandler:
         :return: None
         """
         # determine proxy mode / message type
-        self.proxy_mode = self. get_proxy_mode()
+        self.proxy_mode = self.get_proxy_mode()
         if self.proxy_mode in self.disabled_modes:
             self.info(f"Proxy mode {self.proxy_mode} is disabled. Stopping!")
             return
