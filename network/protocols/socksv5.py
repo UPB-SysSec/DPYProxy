@@ -24,7 +24,7 @@ class Socksv5:
         # read connection methods
         version = connection_socket.recv(1)
         if version != SOCKSv5_HEADER:
-            raise ParserException("Not a SOCKSv4 request")
+            raise ParserException("Not a SOCKSv5 request")
 
         number_authentication_methods = int.from_bytes(connection_socket.recv(1), byteorder='big')
         if number_authentication_methods == 0:
@@ -68,13 +68,13 @@ class Socksv5:
         address_type = connection_socket.recv(1)
         if address_type == b'\x01':
             # ipv4
-            host = '.'.join(f'{c}' for c in connection_socket.recv(4))
+            host = '.'.join(f'{c}' for c in connection_socket.read(4))
         elif address_type == b'\x04':
             # ipv6
-            host = ':'.join(f'{c}' for c in connection_socket.recv(16))
+            host = ':'.join(f'{c}' for c in connection_socket.read(16))
         elif address_type == b'\x03':
             # domain
-            length = int.from_bytes(connection_socket.recv(1), byteorder='big')
+            length = int.from_bytes(connection_socket.read(1), byteorder='big')
             host = connection_socket.read(length).decode('utf-8')
         else:
             raise ParserException(f"Address type {address_type} not supported")
@@ -88,9 +88,9 @@ class Socksv5:
     def socks5_request(server_address: NetworkAddress):
         if not is_valid_ipv4_address(server_address.host):
             domain = server_address.host.encode('utf-8')
-            address = b'\0x03' + len(domain).to_bytes() + domain
+            address = b'\x03' + len(domain).to_bytes() + domain
         else:
-            address = b'\0x01' + socket.inet_aton(server_address.host)
+            address = b'\x01' + socket.inet_aton(server_address.host)
         return (SOCKSv5_HEADER + b'\x01' + Socksv5.RESERVED_BYTE + address
                 + server_address.port.to_bytes(2, byteorder='big'))
 
