@@ -62,11 +62,11 @@ def initialize_parser():
 
     circumventions = parser.add_argument_group('Circumvention options')
 
-    circumventions.add_argument('--version_record_header', type=record_header_version,
-                                default=TlsVersion.DEFAULT.value,
+    circumventions.add_argument('--record_header_version', type=record_header_version,
+                                default=TlsVersion.DEFAULT.name,
                                 help=f'Overwrites the TLS version in the TLS record with the given bytes. Pre-defined '
                                      f'values {[x.name for x in TlsVersion]} or 2 byte long values such as 0303 or '
-                                     f'FFFF can be provded.', )
+                                     f'FFFF can be provided.', )
 
     circumventions.add_argument('--record_frag', type=bool,
                                 default=True,
@@ -131,7 +131,7 @@ def main():
         logging.debug("Forward proxy modes HTTP and SNI only usable if proxy mode is HTTP or SNI respectively.")
         exit()
 
-    proxy = Proxy(server_address, args.timeout, args.version_record_header, args.record_frag, args.tcp_frag,
+    proxy = Proxy(server_address, args.timeout, args.record_header_version, args.record_frag, args.tcp_frag,
                   args.frag_size, args.dot_resolver, args.disabled_modes, forward_proxy, args.forward_proxy_mode,
                   args.forward_proxy_resolve_address)
     proxy.start()

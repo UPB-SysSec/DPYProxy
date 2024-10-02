@@ -30,7 +30,7 @@ class Forwarder:
                                                      )).start()
 
     def _forward(self, from_socket: WrappedSocket, to_socket: WrappedSocket, direction: str, record_frag=False,
-                 record_version: str=TlsVersion.DEFAULT.value):
+                 record_version: str = TlsVersion.DEFAULT.value):
         """
         Forwards data between two sockets with optional record manipulation. Falls back to forwarding if no TLS records
         can be parsed from the connection anymore.
@@ -82,7 +82,6 @@ class Forwarder:
                         base_header = base_header[:1] + record_version_bytes
                     if record_frag:
                         record = self.fragment_record(base_header, record_len, record[5:])
-                    print(record)
                     to_socket.send(record)
         except BrokenPipeError as e:
             self.debug(f"Forwarding broken with {e}", direction)
