@@ -2,8 +2,13 @@ import logging
 import sys
 
 import argparse
+import time
+from argparse import ArgumentParser
 
+from enumerators.Modules import Modules
 from enumerators.ProxyMode import ProxyMode
+from modules.Module import Module
+from modules.base.BaseModule import BaseModule
 from network.Proxy import Proxy
 from network.NetworkAddress import NetworkAddress
 
@@ -14,24 +19,11 @@ def initialize_parser():
     :return:
     """
 
-    def list_of_modes(arg):
-        return list(map(lambda x: ProxyMode(x), arg.split(",")))
 
-    parser = argparse.ArgumentParser(description='Proxy for circumventing DPI-based censorship.',
-                                     usage='%(prog)s [options]', add_help=False)
 
-    # Standard arguments
-    general = parser.add_argument_group('Standard options')
 
-    general.add_argument('-h', '--help', action='help',
-                         help='Show this help message and exit')
 
-    general.add_argument('--debug', type=bool,
-                        default=False,
-                        action=argparse.BooleanOptionalAction,
-                        help="Turns on debugging")
-
-    general.add_argument('--disabled_modes', type=list_of_modes,
+    general.add_argument('--disabled_modes', type= list_of_modes,
                         choices=ProxyMode,
                         default=[],
                         help='List of proxy modes to ignore. By default, all none are disabled. Hence, all are enabled')
@@ -91,31 +83,80 @@ def initialize_parser():
 
     return parser.parse_args()
 
+def extract_activated_modules(parser: ArgumentParser) -> list[Module]:
 
-def main():
-    """
-    Initializes command line parsing and starts a proxy.
-    :return: None
-    """
-    args = initialize_parser()
+    def list_of_modules(arg):
+        return list(map(lambda x: Modules(x), arg.split(",")))
 
+    general = parser.add_argument_group('Standard options')
+
+    general.add_argument('-h', '--help', action='help',
+                         help='Show this help message and exit')
+
+    general.add_argument('--debug', type=bool,
+                         default=False,
+                         action=argparse.BooleanOptionalAction,
+                         help="Turns on debugging")
+
+    general.add_argument('--disabled_modules', type=list_of_modules,
+                         choices=Modules,
+                         default=[Modules.DNS, Modules.TLS],
+                         help='List of proxy modules to disable. By default, all none are disabled. Hence, all are enabled')
+
+    # only parse arguments of basic module to determine used modules
+    args = parser.parse_known_args()[0]
+
+    # change logging
     if args.debug:
         logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
     else:
         logging.basicConfig(stream=sys.stderr, level=logging.INFO)
 
-    server_address = NetworkAddress(args.host, args.port)
-    forward_proxy = None
-    if args.forward_proxy_port is not None:
-        forward_proxy = NetworkAddress(args.forward_proxy_host, args.forward_proxy_port)
+    # crate and set enabled modules
+    return list(map(lambda x: x.create_module(parser),
+                               [x for x in Modules if x not in args.disabled_modules]))
 
-    if args.forward_proxy_mode in [ProxyMode.HTTP, ProxyMode.SNI] and args.forward_proxy_mode != args.proxy_mode:
-        logging.debug("Forward proxy modes HTTP and SNI only usable if proxy mode is HTTP or SNI respectively.")
-        exit()
+def main():
+    """
+    Starts the proxy with all enabled modules.
+    """
+    # initialize argumentParser
+    parser = argparse.ArgumentParser(description='Proxy for circumventing DPI-based censorship.',
+                                     usage='%(prog)s [options]', add_help=False)
 
-    proxy = Proxy(server_address, args.timeout, args.record_frag, args.tcp_frag, args.frag_size,
-                  args.dot_resolver, args.disabled_modes, forward_proxy, args.forward_proxy_mode,
-                  args.forward_proxy_resolve_address)
+    activated_modules = extract_activated_modules(parser)
+
+    # parse options of other modules
+    for otherModule in activated_modules:
+        otherModule.register_parameters()
+
+    # TODO: detect when unknown arguments are of module that was not added, or at least tell the possibility
+    parsed_args = parser.parse_args()
+
+    for otherModule in activated_modules:
+        otherModule.extract_parameters(parsed_args)
+
+    # start modules
+    for otherModule in activated_modules:
+        otherModule.start()
+
+    # TODO: remove busy sleeping
+    try:
+        while True:
+            time.sleep(1000)
+    except KeyboardInterrupt:
+        logging.INFO("Received Keyboard Interrupt. Cancelling modules and exiting!")
+        for otherModule in activated_modules:
+            otherModule.stop()
+        sys.exit(0)
+
+
+def _main():
+    """
+    Initializes command line parsing and starts a proxy.
+    :return: None
+    """
+
     proxy.start()
 
 

@@ -21,9 +21,10 @@ class Forwarder:
                                                      self.socket2,
                                                      f"{self.socket1_name}->{self.socket2_name}",
                                                      self.record_frag)).start()
-        threading.Thread(target=self._forward, args=(self.socket2,
+        x = threading.Thread(target=self._forward, args=(self.socket2,
                                                      self.socket1,
                                                      f"{self.socket2_name}->{self.socket1_name}",
+
                                                      )).start()
 
     def _forward(self, from_socket: WrappedSocket, to_socket: WrappedSocket, direction: str, record_frag=False):

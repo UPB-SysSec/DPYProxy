@@ -1,0 +1,104 @@
+import logging
+from argparse import BooleanOptionalAction, Namespace, ArgumentParser
+
+from enumerators.ProxyMode import ProxyMode
+from modules.Module import Module
+from network.NetworkAddress import NetworkAddress
+from network.Proxy import Proxy
+
+
+class TlsModule(Module):
+    """
+    Implements circumvention methods for the TLS SNI censorship. Currently, implements options for a general TCP socket
+    as TLS is the only TCP-based protocol we support. In future version, those should be abstracted into their own
+    module.
+    """
+
+    def __init__(self, parser: ArgumentParser):
+        super().__init__(parser)
+        self.proxy: Proxy | None = None
+
+
+    def register_parameters(self):
+
+        def list_of_modes(arg):
+            return list(map(lambda x: ProxyMode(x), arg.split(",")))
+
+        tls_module = self.parser.add_argument_group('TLS Module')
+
+        tls_module.add_argument('--tls_disabled_modes', type=list_of_modes,
+                             choices=ProxyMode,
+                             default=[],
+                             help='List of proxy modes to ignore. By default, all none are disabled. Hence, all are enabled')
+
+        tls_module.add_argument('--tls_timeout', type=int,
+                             default=120,
+                             help='Connection timeout in seconds')
+
+        tls_module.add_argument('--tls_host', type=str,
+                             default="localhost",
+                             help='Address the proxy server runs on')
+
+        tls_module.add_argument('--tls_port', type=int,
+                             default=4433,
+                             help='Port the proxy server runs on')
+
+
+        tls_module.add_argument('--tls_record_frag', type=bool,
+                                    default=True,
+                                    action=BooleanOptionalAction,
+                                    help='Whether to use record fragmentation to forwarded TLS handshake messages')
+
+        tls_module.add_argument('--tls_tcp_frag', type=bool,
+                                    default=True,
+                                    action=BooleanOptionalAction,
+                                    help='Whether to use TCP fragmentation to forwarded messages.')
+
+        tls_module.add_argument('--tls_frag_size', type=int,
+                                    default=20,
+                                    help='Bytes in each TCP/TLS record fragment')
+
+        tls_module.add_argument('--tls_dot_resolver', type=str,
+                                    default=None,
+                                    help='DNS server IP for DNS over TLS')
+
+        tls_module.add_argument('--tls_forward_proxy_host', type=str,
+                                   default='localhost',
+                                   help='Host of the forward proxy if any is present')
+
+        tls_module.add_argument('--tls_forward_proxy_port', type=int,
+                                   default=None,
+                                   help='Port the forward proxy server runs on')
+
+        tls_module.add_argument('--tls_forward_proxy_mode', type=ProxyMode.__getitem__,
+                                   choices=ProxyMode,
+                                   default=ProxyMode.HTTPS,
+                                   help='The proxy type of the forward proxy')
+
+        tls_module.add_argument('--tls_forward_proxy_resolve_address', type=bool,
+                                   default=False,
+                                   action=BooleanOptionalAction,
+                                   help='''Whether to resolve domains before including them in the HTTP CONNECT request to the
+                                second proxy''')
+
+
+    def extract_parameters(self, args: Namespace):
+        server_address = NetworkAddress(args.host, args.port)
+        forward_proxy = None
+        if args.forward_proxy_port is not None:
+            forward_proxy = NetworkAddress(args.forward_proxy_host, args.forward_proxy_port)
+
+        if args.forward_proxy_mode in [ProxyMode.HTTP, ProxyMode.SNI] and args.forward_proxy_mode != args.proxy_mode:
+            logging.debug("Forward proxy modes HTTP and SNI only usable if proxy mode is HTTP or SNI respectively.")
+            exit()
+
+        self.proxy = Proxy(server_address, args.timeout, args.record_frag, args.tcp_frag, args.frag_size,
+                      args.dot_resolver, args.disabled_modes, forward_proxy, args.forward_proxy_mode,
+                      args.forward_proxy_resolve_address)
+
+    def start(self):
+        self.proxy.start()
+
+    def stop(self):
+        # TODO: make Proxy and Forwarder cancellable
+
