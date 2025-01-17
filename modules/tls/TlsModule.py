@@ -18,7 +18,6 @@ class TlsModule(Module):
     def __init__(self, parser: ArgumentParser):
         super().__init__(parser)
         self.proxy: Proxy | None = None
-        self.thread: threading.Thread | None = None
 
 
     def register_parameters(self):
@@ -85,21 +84,21 @@ class TlsModule(Module):
 
 
     def extract_parameters(self, args: Namespace):
-        server_address = NetworkAddress(args.host, args.port)
+        server_address = NetworkAddress(args.tls_host, args.tls_port)
         forward_proxy = None
-        if args.forward_proxy_port is not None:
-            forward_proxy = NetworkAddress(args.forward_proxy_host, args.forward_proxy_port)
+        if args.tls_forward_proxy_port is not None:
+            forward_proxy = NetworkAddress(args.tls_forward_proxy_host, args.tls_forward_proxy_port)
 
-        if args.forward_proxy_mode in [ProxyMode.HTTP, ProxyMode.SNI] and args.forward_proxy_mode != args.proxy_mode:
+        if args.tls_forward_proxy_mode in [ProxyMode.HTTP, ProxyMode.SNI] and args.tls_forward_proxy_mode != args.proxy_mode:
             logging.debug("Forward proxy modes HTTP and SNI only usable if proxy mode is HTTP or SNI respectively.")
             exit()
 
-        self.proxy = Proxy(server_address, args.timeout, args.record_frag, args.tcp_frag, args.frag_size,
-                      args.dot_resolver, args.disabled_modes, forward_proxy, args.forward_proxy_mode,
-                      args.forward_proxy_resolve_address)
+        self.proxy = Proxy(server_address, args.tls_timeout, args.tls_record_frag, args.tls_tcp_frag, args.tls_frag_size,
+                      args.tls_dot_resolver, args.tls_disabled_modes, forward_proxy, args.tls_forward_proxy_mode,
+                      args.tls_forward_proxy_resolve_address)
 
     def start(self):
-        self.thread = threading.Thread(target=self.proxy.start()).start()
+        threading.Thread(target=self.proxy.start()).start()
 
     def stop(self):
         self.proxy.continue_processing = False

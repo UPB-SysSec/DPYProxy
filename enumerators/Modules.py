@@ -1,6 +1,7 @@
 from argparse import ArgumentParser
 from enum import Enum
 
+from modules.dns.DnsModule import DnsModule
 from modules.tls.TlsModule import TlsModule
 
 
