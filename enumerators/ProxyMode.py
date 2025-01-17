@@ -11,6 +11,7 @@ class ProxyMode(Enum):
     SOCKSv4 = "SOCKSv4"
     SOCKSv4a = "SOCKSv4a"
     SOCKSv5 = "SOCKSv5"
+    DNS = "DNS"
 
     def __str__(self):
         return self.name

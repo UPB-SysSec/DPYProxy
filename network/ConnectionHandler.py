@@ -7,10 +7,11 @@ from network.DomainResolver import DomainResolver
 from network.Forwarder import Forwarder
 from network.NetworkAddress import NetworkAddress
 from network.WrappedSocket import WrappedSocket
-from network.protocols.http import Http
-from network.protocols.socksv4 import Socksv4
-from network.protocols.socksv5 import Socksv5
-from network.protocols.tls import Tls
+from network.protocols.Dns import Dns
+from network.protocols.Http import Http
+from network.protocols.Socksv4 import Socksv4
+from network.protocols.Socksv5 import Socksv5
+from network.protocols.Tls import Tls
 from util.Util import is_valid_ipv4_address
 from util.constants import STANDARD_SOCKET_RECEIVE_SIZE, TLS_1_0_HEADER, TLS_1_2_HEADER, \
     TLS_1_1_HEADER, SOCKSv4_HEADER, SOCKSv5_HEADER
@@ -60,10 +61,12 @@ class ConnectionHandler:
         # determine destination address
         try:
             final_server_address, http_version = self.get_destination_address()
+            # TODO: If ProxyMode.DNS then also get resolve target
         except ParserException as e:
             logging.warning(f"Could not parse initial proxy message with {e}. Stopping!")
             return
 
+        # TODO: If ProxyMode.DNS then this should probably be done via selected circumvention method also
         # resolve domain if no forward proxy or the forward proxy needs a resolved address
         if (not is_valid_ipv4_address(final_server_address.host)) and \
                 (self.forward_proxy_resolve_address or self.forward_proxy is None):
@@ -74,6 +77,7 @@ class ConnectionHandler:
             self.debug(f"Resolved {host} from {final_server_address.host}")
             final_server_address.host = host
 
+        # TODO: If ProxyMode.DNS and DoT/DoH/DoQ selected, this should be respective target directly
         # set correct target
         if self.forward_proxy is None:
             target_address = (final_server_address.host, final_server_address.port)
@@ -82,6 +86,7 @@ class ConnectionHandler:
             self.debug(f"Using forward proxy {target_address}")
 
         # open socket to server
+        # TODO: If ProxyMode.DNS then this should be UDP with circumventions or separate DoT/DoQ/DoH requests
         try:
             server_socket = socket.create_connection(target_address)
         except Exception as e:
@@ -103,6 +108,7 @@ class ConnectionHandler:
         if self.forward_proxy is not None:
             self.connect_forward_proxy(server_socket, final_server_address, http_version)
 
+        # TODO: If ProxyMode.DNS then we probably do not need a forwarder once we obtain the correct DNS entry?
         # start proxying
         Forwarder(self.connection_socket, self.address.__str__(), server_socket,
                   f"{target_address[0]}:{target_address[1]}", self.record_frag, self.frag_size).start()
@@ -159,6 +165,10 @@ class ConnectionHandler:
             self.debug(f"Read host {host} and port {port} from SOCKSv4")
         elif self.proxy_mode == ProxyMode.SOCKSv5:
             host, port = Socksv5.read_socks5(self.connection_socket)
+            self.debug(f"Read host {host} and port {port} from SOCKSv5")
+        elif self.proxy_mode == ProxyMode.DNS:
+            host, port = Dns.read_dns(self.connection_socket)
+            self.debug(f"Read host {host} and port {port} from DNS")
         else:
             raise ParserException("Unknown proxy type")
         return NetworkAddress(host, port), http_version

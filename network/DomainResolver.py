@@ -7,7 +7,7 @@ class DomainResolver:
     """
     Resolves domains to ip addresses. Can use DNS over TLS or plain DNS.
     """
-    # TODO: DOH / DOQ
+    # TODO: DOH / DOQ for DNS mode
 
     @staticmethod
     def resolve_plain(domain: str) -> str:
