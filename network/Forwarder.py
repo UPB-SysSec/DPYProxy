@@ -1,4 +1,5 @@
 import logging
+import select
 import threading
 
 from network.WrappedSocket import WrappedSocket
@@ -21,10 +22,9 @@ class Forwarder:
                                                      self.socket2,
                                                      f"{self.socket1_name}->{self.socket2_name}",
                                                      self.record_frag)).start()
-        x = threading.Thread(target=self._forward, args=(self.socket2,
+        threading.Thread(target=self._forward, args=(self.socket2,
                                                      self.socket1,
                                                      f"{self.socket2_name}->{self.socket1_name}",
-
                                                      )).start()
 
     def _forward(self, from_socket: WrappedSocket, to_socket: WrappedSocket, direction: str, record_frag=False):
@@ -79,6 +79,7 @@ class Forwarder:
                         fragmented_message += base_header + int.to_bytes(len(fragment), byteorder='big', length=2)
                         fragmented_message += fragment
                     to_socket.send(fragmented_message)
+            logging.info("### Cancelled forwarding ###")
         except BrokenPipeError as e:
             self.debug(f"Forwarding broken with {e}", direction)
             to_socket.try_close()

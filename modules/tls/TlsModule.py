@@ -1,4 +1,5 @@
 import logging
+import threading
 from argparse import BooleanOptionalAction, Namespace, ArgumentParser
 
 from enumerators.ProxyMode import ProxyMode
@@ -17,6 +18,7 @@ class TlsModule(Module):
     def __init__(self, parser: ArgumentParser):
         super().__init__(parser)
         self.proxy: Proxy | None = None
+        self.thread: threading.Thread | None = None
 
 
     def register_parameters(self):
@@ -97,8 +99,9 @@ class TlsModule(Module):
                       args.forward_proxy_resolve_address)
 
     def start(self):
-        self.proxy.start()
+        self.thread = threading.Thread(target=self.proxy.start()).start()
 
     def stop(self):
-        # TODO: make Proxy and Forwarder cancellable
+        self.proxy.continue_processing = False
+        logging.info("Waiting for proxy to stop")
 

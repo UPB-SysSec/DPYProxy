@@ -37,7 +37,7 @@ class Module(ABC):
     @abstractmethod
     def stop(self):
         """
-        Should stop the module if it is running. I.e., reverse the start() operation. Does nothing if the module has
+        Stops the module from accepting any future connections. Running connections are continued. Does nothing if the module has
         not been started before.
         """
         pass
