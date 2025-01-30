@@ -1,14 +1,13 @@
 import logging
-import select
 import threading
 
-from network.WrappedSocket import WrappedSocket
+from network.tcp.WrappedTcpSocket import WrappedTcpSocket
 from util.constants import STANDARD_SOCKET_RECEIVE_SIZE, TLS_1_0_HEADER, TLS_1_2_HEADER, TLS_1_1_HEADER
 
 
 class Forwarder:
 
-    def __init__(self, socket1: WrappedSocket, socket1_name: str, socket2: WrappedSocket, socket2_name: str,
+    def __init__(self, socket1: WrappedTcpSocket, socket1_name: str, socket2: WrappedTcpSocket, socket2_name: str,
                  record_frag: bool = False, frag_size: int = 0):
         self.socket1 = socket1
         self.socket2 = socket2
@@ -27,7 +26,7 @@ class Forwarder:
                                                      f"{self.socket2_name}->{self.socket1_name}",
                                                      )).start()
 
-    def _forward(self, from_socket: WrappedSocket, to_socket: WrappedSocket, direction: str, record_frag=False):
+    def _forward(self, from_socket: WrappedTcpSocket, to_socket: WrappedTcpSocket, direction: str, record_frag=False):
         """
         Forwards data between two sockets with optional record fragmentation. Falls back to forwarding if no TLS records
         can be parsed from the connection anymore.

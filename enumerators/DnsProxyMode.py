@@ -1,7 +1,7 @@
 from enum import Enum
 
 
-class DnsMode(Enum):
+class DnsProxyMode(Enum):
     """
     Possible DNS Modes
     """
@@ -9,6 +9,9 @@ class DnsMode(Enum):
     DOT = "DOT"
     DOH = "DOH"
     DOQ = "DOQ"
+    TCP = "TCP"
+    TCP_FRAG = "TCP_FRAG"
+    CHINA = "CHINA"
 
     def __str__(self):
         return self.name

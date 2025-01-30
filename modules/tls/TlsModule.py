@@ -2,10 +2,10 @@ import logging
 import threading
 from argparse import BooleanOptionalAction, Namespace, ArgumentParser
 
-from enumerators.ProxyMode import ProxyMode
+from enumerators.TcpProxyMode import TcpProxyMode
 from modules.Module import Module
 from network.NetworkAddress import NetworkAddress
-from network.Proxy import Proxy
+from network.tcp.TcpProxy import TcpProxy
 
 
 class TlsModule(Module):
@@ -17,20 +17,20 @@ class TlsModule(Module):
 
     def __init__(self, parser: ArgumentParser):
         super().__init__(parser)
-        self.proxy: Proxy | None = None
+        self.proxy: TcpProxy | None = None
 
 
     def register_parameters(self):
 
         def list_of_modes(arg):
-            return list(map(lambda x: ProxyMode(x), arg.split(",")))
+            return list(map(lambda x: TcpProxyMode(x), arg.split(",")))
 
         tls_module = self.parser.add_argument_group('TLS Module')
 
         tls_module.add_argument('--tls_disabled_modes', type=list_of_modes,
-                             choices=ProxyMode,
-                             default=[],
-                             help='List of proxy modes to ignore. By default, all none are disabled. Hence, all are enabled')
+                                choices=TcpProxyMode,
+                                default=[],
+                                help='List of proxy modes to ignore. By default, all none are disabled. Hence, all are enabled')
 
         tls_module.add_argument('--tls_timeout', type=int,
                              default=120,
@@ -71,10 +71,10 @@ class TlsModule(Module):
                                    default=None,
                                    help='Port the forward proxy server runs on')
 
-        tls_module.add_argument('--tls_forward_proxy_mode', type=ProxyMode.__getitem__,
-                                   choices=ProxyMode,
-                                   default=ProxyMode.HTTPS,
-                                   help='The proxy type of the forward proxy')
+        tls_module.add_argument('--tls_forward_proxy_mode', type=TcpProxyMode.__getitem__,
+                                choices=TcpProxyMode,
+                                default=TcpProxyMode.HTTPS,
+                                help='The proxy type of the forward proxy')
 
         tls_module.add_argument('--tls_forward_proxy_resolve_address', type=bool,
                                    default=False,
@@ -89,13 +89,13 @@ class TlsModule(Module):
         if args.tls_forward_proxy_port is not None:
             forward_proxy = NetworkAddress(args.tls_forward_proxy_host, args.tls_forward_proxy_port)
 
-        if args.tls_forward_proxy_mode in [ProxyMode.HTTP, ProxyMode.SNI] and args.tls_forward_proxy_mode != args.proxy_mode:
+        if args.tls_forward_proxy_mode in [TcpProxyMode.HTTP, TcpProxyMode.SNI] and args.tls_forward_proxy_mode != args.proxy_mode:
             logging.debug("Forward proxy modes HTTP and SNI only usable if proxy mode is HTTP or SNI respectively.")
             exit()
 
-        self.proxy = Proxy(server_address, args.tls_timeout, args.tls_record_frag, args.tls_tcp_frag, args.tls_frag_size,
-                      args.tls_dot_resolver, args.tls_disabled_modes, forward_proxy, args.tls_forward_proxy_mode,
-                      args.tls_forward_proxy_resolve_address)
+        self.proxy = TcpProxy(server_address, args.tls_timeout, args.tls_record_frag, args.tls_tcp_frag, args.tls_frag_size,
+                              args.tls_dot_resolver, args.tls_disabled_modes, forward_proxy, args.tls_forward_proxy_mode,
+                              args.tls_forward_proxy_resolve_address)
 
     def start(self):
         threading.Thread(target=self.proxy.start()).start()

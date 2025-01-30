@@ -1,7 +1,7 @@
 from enum import Enum
 
 
-class ProxyMode(Enum):
+class TcpProxyMode(Enum):
     """
     Modes the proxy can operate in
     """
@@ -11,7 +11,6 @@ class ProxyMode(Enum):
     SOCKSv4 = "SOCKSv4"
     SOCKSv4a = "SOCKSv4a"
     SOCKSv5 = "SOCKSv5"
-    DNS = "DNS"
 
     def __str__(self):
         return self.name

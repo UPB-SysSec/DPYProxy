@@ -1,13 +1,13 @@
 from time import time
 
 from exception.ParserException import ParserException
-from network.WrappedSocket import WrappedSocket
+from network.tcp.WrappedTcpSocket import WrappedTcpSocket
 from util.constants import TLS_1_0_HEADER, TLS_1_1_HEADER, TLS_1_2_HEADER
 
 
 class Tls:
     @staticmethod
-    def read_sni(wrapped_socket: WrappedSocket, timeout: int) -> str:
+    def read_sni(wrapped_socket: WrappedTcpSocket, timeout: int) -> str:
         """
         Attempts to read the host from the SNI extension. If the client does not send a SNI extension, None is returned.
         :return: host of the sni extension
@@ -68,7 +68,7 @@ class Tls:
         raise ParserException("No SNI present")
 
     @staticmethod
-    def _read_tls_message(wrapped_socket: WrappedSocket, timeout: int, peek=False) -> bytes:
+    def _read_tls_message(wrapped_socket: WrappedTcpSocket, timeout: int, peek=False) -> bytes:
         """
         Reads the content of the next tls message from the socket.
         :param: whether to peek the tls message.
@@ -94,7 +94,7 @@ class Tls:
         return message
 
     @staticmethod
-    def _read_tls_record(wrapped_socket: WrappedSocket, ) -> bytes:
+    def _read_tls_record(wrapped_socket: WrappedTcpSocket, ) -> bytes:
         """
         Reads the content of the next tls record from the wire with headers. Throws exception if no record is received.
         :return: The contents of the TLS record

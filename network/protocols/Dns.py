@@ -1,4 +1,4 @@
-from network.WrappedSocket import WrappedSocket
+from network.tcp.WrappedTcpSocket import WrappedTcpSocket
 
 
 class Dns:
@@ -7,7 +7,7 @@ class Dns:
     """
 
     @staticmethod
-    def read_dns(wrapped_socket: WrappedSocket):
+    def read_dns(wrapped_socket: WrappedTcpSocket):
         # TODO: Implement parsing
         pass
 

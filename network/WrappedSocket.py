@@ -10,10 +10,9 @@ class WrappedSocket:
     Wraps a socket with useful utility functions.
     """
 
-    def __init__(self, timeout: int, _socket: socket.socket, tcp_frag_size=0):
+    def __init__(self, timeout: int, _socket: socket.socket):
         self.timeout = timeout
         self.buffer = b''
-        self.tcp_frag_size = tcp_frag_size
         self.socket = _socket
         self.socket.settimeout(timeout)
 
@@ -71,21 +70,6 @@ class WrappedSocket:
         else:
             _res = self.socket.recv(size, *args, **kwargs)
         return _res
-
-    def send(self, data: bytes, *args, **kwargs) -> int:
-        """
-        Wraps send() of the wrapped socket. Split into tcp fragments if given as value.
-        :return: Return value of the wrapped socket's send method
-        """
-        if self.tcp_frag_size <= 0:
-            return self.socket.send(data, *args, **kwargs)
-        else:
-            # split into fragments and send each separately
-            fragments = (data[i:i+self.tcp_frag_size] for i in range(0, len(data), self.tcp_frag_size))
-            for fragment in fragments:
-                self.socket.send(fragment, *args, **kwargs)
-                self.socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 0)
-                self.socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
 
     def close(self):
         """

@@ -1,6 +1,6 @@
 from exception.ParserException import ParserException
 from network.NetworkAddress import NetworkAddress
-from network.WrappedSocket import WrappedSocket
+from network.tcp.WrappedTcpSocket import WrappedTcpSocket
 
 
 # TODO: HTTP/2 support
@@ -10,7 +10,7 @@ class Http:
     """
 
     @staticmethod
-    def _parse_http_method(wrapped_socket: WrappedSocket, method: str, peek: bool = False) -> (str, int, str):
+    def _parse_http_method(wrapped_socket: WrappedTcpSocket, method: str, peek: bool = False) -> (str, int, str):
         """
         Reads the first line of a http method to parse the domain from it.
         :return: host and port in the method, defaults to port 80 if no port found
@@ -37,7 +37,7 @@ class Http:
         return host, port, version
 
     @staticmethod
-    def read_http_get(wrapped_socket: WrappedSocket) -> (str, int, str):
+    def read_http_get(wrapped_socket: WrappedTcpSocket) -> (str, int, str):
         """
         Reads the first line of a http get request.
         :return: host, port, and version from the http get request.
@@ -45,7 +45,7 @@ class Http:
         return Http._parse_http_method(wrapped_socket, "GET", True)
 
     @staticmethod
-    def read_http_connect(wrapped_socket: WrappedSocket) -> (str, int, str):
+    def read_http_connect(wrapped_socket: WrappedTcpSocket) -> (str, int, str):
         """
         Reads the first line of a http connect request.
         :return: host, port, and http version from the http connect request.
