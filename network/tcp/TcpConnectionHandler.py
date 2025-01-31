@@ -4,7 +4,7 @@ import socket
 from enumerators.TcpProxyMode import TcpProxyMode
 from exception.ParserException import ParserException
 from network.DomainResolver import DomainResolver
-from network.Forwarder import Forwarder
+from network.tcp.Forwarder import Forwarder
 from network.NetworkAddress import NetworkAddress
 from network.tcp.WrappedTcpSocket import WrappedTcpSocket
 from network.protocols.Dns import Dns
@@ -71,7 +71,7 @@ class TcpConnectionHandler:
         if (not is_valid_ipv4_address(final_server_address.host)) and \
                 (self.forward_proxy_resolve_address or self.forward_proxy is None):
             if self.dot_ip:
-                host = DomainResolver.resolve_over_dot(final_server_address.host, self.dot_ip)
+                host = DomainResolver.resolve(final_server_address.host, self.dot_ip)
             else:
                 host = DomainResolver.resolve_plain(final_server_address.host)
             self.debug(f"Resolved {host} from {final_server_address.host}")
