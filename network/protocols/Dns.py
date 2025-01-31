@@ -12,9 +12,9 @@ class Dns:
     DNS_MAX_SIZE = 512
 
     @staticmethod
-    def read_dns(wrapped_socket: WrappedSocket) -> dns.message.Message:
+    def read_dns(message: bytes) -> dns.message.Message:
         try:
-            return dns.message.from_wire(wrapped_socket.read(Dns.DNS_MAX_SIZE * 4))
+            return dns.message.from_wire(message)
         except Exception as e:
             raise DnsException(f"Could not parse DNS message: {e}")
         pass

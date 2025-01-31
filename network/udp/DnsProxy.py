@@ -20,7 +20,7 @@ class DnsProxy:
     RESOLVER = NetworkAddress("9.9.9.9", 0)
 
     def __init__(self, address: NetworkAddress,
-                 timeout: int = 120,
+                 timeout: int = 2,
                  proxy_mode: DnsProxyMode = DnsProxyMode.AUTO):
         # timeout for socket reads and message reception
         self.timeout = timeout
@@ -28,17 +28,18 @@ class DnsProxy:
         self.proxy_mode = proxy_mode
         self.server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.server.settimeout(self.timeout)
         self.continue_processing = True
         # initialized in start()
         self.domain_resolver: DomainResolver|None = None
 
 
-    def handle(self, client_socket: WrappedSocket):
+    def handle(self, message: bytes):
 
         # receive message from client
 
         try:
-            message = Dns.read_dns(client_socket)
+            message = Dns.read_dns(message)
         except DnsException as e:
             logging.error(f"Could not parse DNS message: {e}")
             return
@@ -87,18 +88,17 @@ class DnsProxy:
 
         # opening server socket
         self.server.bind((self.address.host, self.address.port))
-        self.server.listen()
         # TODO: make UDP / TCP specifiable
         print(f"### Started UDP proxy on {self.address.host}:{self.address.port} ###")
+
         while self.continue_processing:
             readable, _, _ = select.select([self.server], [], [], 1)
             if not readable:
                 continue
             # listen for incoming connections
-            client_socket, address = self.server.accept()
+            message, address = self.server.recvfrom(Dns.DNS_MAX_SIZE * 4)
             address = NetworkAddress(address[0], address[1])
-            client_socket = WrappedSocket(self.timeout, client_socket)
             logging.info(f"request from {address.host}:{address.port}")
             # spawn a new thread that runs the function handle()
-            threading.Thread(target=self.handle, args=(client_socket, address)).start()
+            threading.Thread(target=self.handle, args=(message, address)).start()
         logging.info("### Stopped proxy ###")

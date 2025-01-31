@@ -6,7 +6,7 @@ class DnsProxyMode(Enum):
     Possible DNS Modes
     """
     AUTO = "AUTO"
-    DNS = "DNS"
+    UDP = "UDP"
     DOT = "DOT"
     DOH = "DOH"
     DOQ = "DOQ"

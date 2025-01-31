@@ -5,6 +5,7 @@ from enumerators.TcpProxyMode import TcpProxyMode
 from modules.Module import Module
 from network.NetworkAddress import NetworkAddress
 from network.tcp.TcpProxy import TcpProxy
+from network.udp.DnsProxy import DnsProxy
 
 
 class DnsModule(Module):
@@ -14,7 +15,7 @@ class DnsModule(Module):
 
     def __init__(self, parser: ArgumentParser):
         super().__init__(parser)
-        self.proxy: TcpProxy | None = None
+        self.proxy: DnsProxy | None = None
 
 
     def register_parameters(self):
@@ -52,14 +53,7 @@ class DnsModule(Module):
 
     def extract_parameters(self, args: Namespace):
         server_address = NetworkAddress(args.dns_host, args.dns_port)
-        forward_proxy = None
-        if args.dns_forward_proxy_port is not None:
-            forward_proxy = NetworkAddress(args.dns_forward_proxy_host, args.dns_forward_proxy_port)
-
-        self.proxy = TcpProxy(server_address, args.dns_timeout, False, False, 0,
-                              args.dns_dot_resolver, [TcpProxyMode.HTTP, TcpProxyMode.HTTPS, TcpProxyMode.SNI,
-                                                      TcpProxyMode.SOCKSv4, TcpProxyMode.SOCKSv4a, TcpProxyMode.SOCKSv5], forward_proxy, TcpProxyMode.DNS,
-                              args.forward_proxy_resolve_address)
+        self.proxy = DnsProxy(server_address, args.dns_timeout, args.dns_mode)
 
     def start(self):
         self.proxy.start()
