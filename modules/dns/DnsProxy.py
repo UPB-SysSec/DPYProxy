@@ -6,10 +6,12 @@ import traceback
 
 from enumerators.DnsProxyMode import DnsProxyMode
 from exception.DnsException import DnsException
+from modules.dns.DnsModeDeterminator import DnsModeDeterminator
 from network.DomainResolver import DomainResolver
 from network.NetworkAddress import NetworkAddress
-from network.WrappedSocket import WrappedSocket
 from network.protocols.Dns import Dns
+from dns.message import make_response
+from dns.rcode import SERVFAIL
 
 
 class DnsProxy:
@@ -72,15 +74,18 @@ class DnsProxy:
             elif self.proxy_mode == DnsProxyMode.LAST_RESPONSE:
                 answer = self.domain_resolver.resolve_response(message)
             else:
-                logging.error("Unknown proxy mode.")
-                return
+                logging.error(f"Unknown proxy mode {self.proxy_mode}.")
+                answer = make_response(message)
+                answer.set_rcode(SERVFAIL)
 
-        except Exception as e:
-            # TODO: Send error to client?
+        except Exception as _:
             logging.error(f"Could not query Dns message using mode {self.proxy_mode} with error: {traceback.format_exc()}")
-            return
+            answer = make_response(message)
+            answer.set_rcode(SERVFAIL)
 
         # return answer
+        answer = make_response(message)
+        answer.set_rcode(SERVFAIL)
         self.server.sendto(answer.to_wire(), (address.host, address.port))
 
     def start(self):
@@ -90,6 +95,7 @@ class DnsProxy:
         """
         if self.proxy_mode == DnsProxyMode.AUTO:
             logging.info("Automatic mode not implemented yet.")
+            DnsModeDeterminator(self.timeout).determine_mode(self)
             # self.proxy_mode = determine_mode()
             # TODO implement automatic mode
 

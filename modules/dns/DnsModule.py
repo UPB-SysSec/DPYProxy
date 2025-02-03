@@ -1,11 +1,9 @@
 from argparse import Namespace, ArgumentParser
 
 from enumerators.DnsProxyMode import DnsProxyMode
-from enumerators.TcpProxyMode import TcpProxyMode
 from modules.Module import Module
 from network.NetworkAddress import NetworkAddress
-from network.tcp.TcpProxy import TcpProxy
-from network.udp.DnsProxy import DnsProxy
+from modules.dns.DnsProxy import DnsProxy
 
 
 class DnsModule(Module):
