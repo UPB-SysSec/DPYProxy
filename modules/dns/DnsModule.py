@@ -25,6 +25,7 @@ class DnsModule(Module):
                                 default=DnsProxyMode.AUTO,
                                 help='Mode that the DNS proxy operates in. Default AUTO.')
 
+        # TODO: pass timeout to dns classes
         dns_module.add_argument('--dns_timeout', type=int,
                                 default=120,
                                 help='Connection timeout in seconds')

@@ -2,6 +2,7 @@ import logging
 import select
 import socket
 import threading
+import traceback
 
 from enumerators.DnsProxyMode import DnsProxyMode
 from exception.DnsException import DnsException
@@ -17,7 +18,14 @@ class DnsProxy:
     """
 
     # TODO: import from config file / determine during auto mode
-    RESOLVER = NetworkAddress("9.9.9.9", 0)
+    DOT_RESOLVER = NetworkAddress("9.9.9.9", 853)
+    DOH_RESOLVER = NetworkAddress("9.9.9.9", 443)
+    UDP_RESOLVER = NetworkAddress("9.9.9.9", 53)
+    TCP_RESOLVER = NetworkAddress("9.9.9.9", 53)
+    DOQ_RESOLVER = NetworkAddress("1.1.1.1", 443)
+
+    # TODO: make specifiable?
+    DNS_TCP_FRAG_SIZE = 20
 
     def __init__(self, address: NetworkAddress,
                  timeout: int = 2,
@@ -34,7 +42,7 @@ class DnsProxy:
         self.domain_resolver: DomainResolver|None = None
 
 
-    def handle(self, message: bytes):
+    def handle(self, message: bytes, address: NetworkAddress):
 
         # receive message from client
 
@@ -44,29 +52,36 @@ class DnsProxy:
             logging.error(f"Could not parse DNS message: {e}")
             return
 
+        try:
+            # handle message
+            if self.proxy_mode == DnsProxyMode.AUTO:
+                logging.error("Proxy mode has not been set after automatic discovery.")
+                return
+            elif self.proxy_mode == DnsProxyMode.UDP:
+                answer = self.domain_resolver.resolve_udp(message)
+            elif self.proxy_mode == DnsProxyMode.DOH:
+                answer = self.domain_resolver.resolve_doh(message)
+            elif self.proxy_mode == DnsProxyMode.DOT:
+                answer = self.domain_resolver.resolve_dot(message)
+            elif self.proxy_mode == DnsProxyMode.DOQ:
+                answer = self.domain_resolver.resolve_doq(message)
+            elif self.proxy_mode == DnsProxyMode.TCP:
+                answer = self.domain_resolver.resolve_tcp(message)
+            elif self.proxy_mode == DnsProxyMode.TCP_FRAG:
+                answer = self.domain_resolver.resolve_tcp_frag(message)
+            elif self.proxy_mode == DnsProxyMode.CHINA:
+                answer = self.domain_resolver.resolve_china(message)
+            else:
+                logging.error("Unknown proxy mode.")
+                return
 
-        if self.proxy_mode == DnsProxyMode.AUTO:
-            logging.error("Proxy mode has not been set after automatic discovery.")
-            return
-        elif self.proxy_mode == DnsProxyMode.UDP:
-            answer = self.domain_resolver.resolve_udp(message)
-        elif self.proxy_mode == DnsProxyMode.DOH:
-            answer = self.domain_resolver.resolve_doh(message)
-        elif self.proxy_mode == DnsProxyMode.DOT:
-            answer = self.domain_resolver.resolve_dot(message)
-        elif self.proxy_mode == DnsProxyMode.DOQ:
-            answer = self.domain_resolver.resolve_doq(message)
-        elif self.proxy_mode == DnsProxyMode.TCP:
-            answer = self.domain_resolver.resolve_tcp(message)
-        elif self.proxy_mode == DnsProxyMode.TCP_FRAG:
-            answer = self.domain_resolver.resolve_tcp_frag(message)
-        elif self.proxy_mode == DnsProxyMode.CHINA:
-            answer = self.domain_resolver.resolve_china(message)
-        else:
-            logging.error("Unknown proxy mode.")
+        except Exception as e:
+            # TODO: Send error to client?
+            logging.error(f"Could not query Dns message using mode {self.proxy_mode} with error: {traceback.format_exc()}")
             return
 
-        client_socket.socket.send(answer.to_wire())
+        # return answer
+        self.server.sendto(answer.to_wire(), (address.host, address.port))
 
     def start(self):
         """
@@ -78,13 +93,15 @@ class DnsProxy:
             # self.proxy_mode = determine_mode()
             # TODO implement automatic mode
 
-        self.domain_resolver = DomainResolver(udp_dns_resolver=DnsProxy.RESOLVER,
-                                             tcp_dns_resolver=DnsProxy.RESOLVER,
-                                             tcp_frag_dns_resolver=DnsProxy.RESOLVER,
-                                             doh_dns_resolver=DnsProxy.RESOLVER,
-                                             doq_dns_resolver=DnsProxy.RESOLVER,
-                                             dot_dns_resolver=DnsProxy.RESOLVER,
-                                             dns_mode=self.proxy_mode)
+        self.domain_resolver = DomainResolver(udp_dns_resolver=DnsProxy.UDP_RESOLVER,
+                                             tcp_dns_resolver=DnsProxy.TCP_RESOLVER,
+                                             tcp_frag_dns_resolver=DnsProxy.TCP_RESOLVER,
+                                             doh_dns_resolver=DnsProxy.DOH_RESOLVER,
+                                             doq_dns_resolver=DnsProxy.DOQ_RESOLVER,
+                                             dot_dns_resolver=DnsProxy.DOT_RESOLVER,
+                                             tcp_frag_size=DnsProxy.DNS_TCP_FRAG_SIZE,
+                                             dns_mode=self.proxy_mode,
+                                             timeout=self.timeout)
 
         # opening server socket
         self.server.bind((self.address.host, self.address.port))
