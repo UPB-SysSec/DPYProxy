@@ -25,10 +25,9 @@ class DnsModule(Module):
                                 default=DnsProxyMode.AUTO,
                                 help='Mode that the DNS proxy operates in. Default AUTO.')
 
-        # TODO: pass timeout to dns classes
         dns_module.add_argument('--dns_timeout', type=int,
-                                default=120,
-                                help='Connection timeout in seconds')
+                                default=3,
+                                help=f'Connection timeout in seconds. For the {DnsProxyMode.LAST_RESPONSE} mode this timeout will always be reached. Set this timeout and the timeout of calling application accordingly.')
 
         dns_module.add_argument('--dns_host', type=str,
                                 default="localhost",
@@ -60,6 +59,5 @@ class DnsModule(Module):
         self.proxy.start()
 
     def stop(self):
-        # TODO: make Proxy and Forwarder cancellable
-        pass
+        self.proxy.continue_processing = False
 

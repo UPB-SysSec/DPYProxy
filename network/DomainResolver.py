@@ -1,7 +1,11 @@
 import socket
 
 from dns.message import Message
-from dns.query import tls, tcp, https, udp, HTTPVersion
+from dns.query import tls, tcp, https, udp, send_udp, receive_udp, HTTPVersion
+from dns.exception import Timeout
+import time
+
+from httpx import TimeoutException
 
 from enumerators.DnsProxyMode import DnsProxyMode
 from exception.DnsException import DnsException
@@ -119,11 +123,23 @@ class DomainResolver:
         frag_socket = WrappedTcpSocket(timeout = self.timeout, _socket = _socket, tcp_frag_size=self.tcp_frag_size)
         return tcp(message, where=self.tcp_frag_resolver.host, port=self.tcp_frag_resolver.port, sock=frag_socket, timeout = self.timeout)
 
-    def resolve_china(self, message: Message) -> Message:
+    def resolve_response(self, message: Message) -> Message:
         """
         Resolves the given domain to an ip address over UDP but waiting a certain timeout and forwarding the last answer
          received. This circumvents China-specific censorship.
         """
-
-        #TODO
-        pass
+        # create udp socket
+        _socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        _socket.setblocking(False)
+        _address = (self.udp_resolver.host, self.udp_resolver.port)
+        # send message to server
+        send_udp(sock = _socket, what = message, destination=_address, expiration=self.timeout)
+        #TODO loop of receiving message until timeout reached, return last
+        last_received = None
+        stop_time = time.time() + self.timeout
+        while True:
+            try:
+                last_received, _ = receive_udp(sock = _socket, destination=_address, expiration=stop_time)
+            except Timeout:
+                break
+        return last_received

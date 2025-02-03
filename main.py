@@ -70,7 +70,7 @@ def main():
         while True:
             time.sleep(1000)
     except KeyboardInterrupt:
-        logging.INFO("Received Keyboard Interrupt. Cancelling modules and exiting!")
+        logging.info("Received Keyboard Interrupt. Cancelling modules and exiting!")
         for otherModule in activated_modules:
             otherModule.stop()
         sys.exit(0)

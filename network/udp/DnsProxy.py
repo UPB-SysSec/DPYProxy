@@ -69,8 +69,8 @@ class DnsProxy:
                 answer = self.domain_resolver.resolve_tcp(message)
             elif self.proxy_mode == DnsProxyMode.TCP_FRAG:
                 answer = self.domain_resolver.resolve_tcp_frag(message)
-            elif self.proxy_mode == DnsProxyMode.CHINA:
-                answer = self.domain_resolver.resolve_china(message)
+            elif self.proxy_mode == DnsProxyMode.LAST_RESPONSE:
+                answer = self.domain_resolver.resolve_response(message)
             else:
                 logging.error("Unknown proxy mode.")
                 return

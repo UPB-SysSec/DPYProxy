@@ -12,7 +12,7 @@ class DnsProxyMode(Enum):
     DOQ = "DOQ"
     TCP = "TCP"
     TCP_FRAG = "TCP_FRAG"
-    CHINA = "CHINA"
+    LAST_RESPONSE = "LAST_RESPONSE"
 
     def __str__(self):
         return self.name
