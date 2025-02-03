@@ -134,7 +134,6 @@ class DomainResolver:
         _address = (self.udp_resolver.host, self.udp_resolver.port)
         # send message to server
         send_udp(sock = _socket, what = message, destination=_address, expiration=self.timeout)
-        #TODO loop of receiving message until timeout reached, return last
         last_received = None
         stop_time = time.time() + self.timeout
         while True:
