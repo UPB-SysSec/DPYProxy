@@ -1,3 +1,5 @@
+from dns.message import Message, make_response
+
 from exception.DnsException import DnsException
 from network.DomainResolver import DomainResolver
 from network.WrappedSocket import WrappedSocket
@@ -52,3 +54,13 @@ class Dns:
                     for item in record.items:
                         return domain_resolver.resolve(str(item.target))
             return None
+
+    @staticmethod
+    def make_response(message: Message, orig_id: int) -> Message:
+        """
+        Creates a DNS response message to the given query. Replaces the answers id with the original id. Necessary for
+        DoQ and maybe DoH as they set the id to 0.
+        """
+        answer = make_response(message)
+        answer.id = orig_id
+        return answer

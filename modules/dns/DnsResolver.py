@@ -11,4 +11,4 @@ class DnsResolver:
     mode: DnsProxyMode
 
     def __str__(self):
-        return f"{self.name}({self.address})"
+        return f"{self.name}({self.address} - {self.mode})"

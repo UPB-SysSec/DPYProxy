@@ -9,7 +9,7 @@ class DnsProxyMode(Enum):
     UDP = "UDP"
     DOT = "DOT"
     DOH = "DOH"
-    # TODO: difference between DoQ and DoH3?
+    DOH3 = "DOH3"
     DOQ = "DOQ"
     TCP = "TCP"
     TCP_FRAG = "TCP_FRAG"
