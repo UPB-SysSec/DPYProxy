@@ -1,8 +1,10 @@
 import logging
-from doctest import Example
+
+import dns.message
 
 from enumerators.DnsProxyMode import DnsProxyMode
-from enumerators.Port import Port
+from enumerators.DnsResolvers import DnsResolvers
+from exception.DnsException import DnsException
 from modules.dns.DnsResolver import DnsResolver
 from network.DomainResolver import DomainResolver
 from network.NetworkAddress import NetworkAddress
@@ -16,79 +18,136 @@ class DnsModeDeterminator:
     """
 
     @staticmethod
-    def parse_resolvers(resolvers:list[tuple[DnsProxyMode, str, str, int]]) -> list[DnsResolver]:
+    def assert_correct_ip(answer: dns.message.Message, ip: str) -> bool:
+        """
+        Determines whether the given DNS response contains the given IP in its answer section.
+        """
+        # TODO: handle multiple IPs in answer?
+        # extract IP from answer
+        try:
+            resolved_address = list(answer.answer[0].items.keys())[0].address
+        except Exception as e:
+            logging.debug(
+                f"Could not extract answer record from received DNS response with exception {e}:\n{answer}")
+            return False
+        else:
+            if resolved_address != ip:
+                logging.debug(
+                    f"Received {resolved_address} instead of {ip}")
+                return False
+            else:
+                return True
+
+    @staticmethod
+    def parse_custom_resolvers(resolvers: list[tuple[DnsProxyMode, str, str, int]]) -> list[DnsResolver]:
+        """
+        Parses a list of custom resolvers (tuple of ProxyMode, name, ip, port) into DnsResolver objects.
+        """
         _ret = []
         for resolver in resolvers:
             address = NetworkAddress(resolver[2], resolver[3])
             _ret += [DnsResolver(resolver[1], address, resolver[0])]
         return _ret
 
+    @staticmethod
+    def parse_default_resolvers(resolvers: list[DnsResolvers], modes: list[DnsProxyMode]) -> list[DnsResolver]:
+        """
+        Parses a list of default resolvers into DnsResolver objects using their standard ports and names. Does that for
+        all provided proxy modes.
+        """
+        _ret = []
+        for mode in modes:
+            # call custom resolver method with resolvers default values
+           _ret += DnsModeDeterminator.parse_custom_resolvers(
+                list(map(
+                    lambda resolver: (mode, str(resolver.name), str(resolver.value), mode.default_port()), resolvers)))
+        return _ret
 
-    EXAMPLE_REQUEST = make_query("www.wikipedia.org", "A")
+    @staticmethod
+    def generate_resolvers() -> list[DnsResolver]:
+        """
+        Generates a list of DnsResolver objects based on the statically defined addresses below.
+        """
+        _res = []
 
-    # extend with https://en.wikipedia.org/wiki/Public_recursive_name_server
+        # append RESOLVERS_SUPPORT_ALL
+        _res += DnsModeDeterminator.parse_default_resolvers(DnsModeDeterminator.RESOLVERS_SUPPORT_ALL,
+                                                            [mode for mode in DnsProxyMode if mode != DnsProxyMode.AUTO])
 
-    # TODO adguard
-    # TODO cloudflare family and security?
-    # TODO mullvad
-    # TODO cisco umberalla?
-    # TODO quad 9 backups ?
-    # TODO yandex
+        # append RESOLVERS_SUPPORT_ALL_EXCEPT_DOQ
+        _res += DnsModeDeterminator.parse_default_resolvers(DnsModeDeterminator.RESOLVERS_SUPPORT_ALL_EXCEPT_DOQ,
+                                                            [mode for mode in DnsProxyMode if mode != DnsProxyMode.DOQ and mode != DnsProxyMode.AUTO])
 
+        # append RESOLVERS_SUPPORT_ENCRYPTED_EXCEPT_DOQ
+        _res += DnsModeDeterminator.parse_default_resolvers(DnsModeDeterminator.RESOLVERS_SUPPORT_ENCRYPTED_EXCEPT_DOQ,
+                                                            [DnsProxyMode.DOT, DnsProxyMode.DOH, DnsProxyMode.DOH3])
 
-    CLOUDFLARE_DNS_1 = "1.1.1.1"
-    CLOUDFLARE_DNS_2 = "1.0.0.1"
-    GOOGLE_DNS_1 = "8.8.8.8"
-    GOOGLE_DNS_2 = "8.8.4.4"
-    QUAD_9_DNS = "9.9.9.9"
+        # append RESOLVERS_SUPPORT_ONLY_UNENCRYPTED
+        _res += DnsModeDeterminator.parse_default_resolvers(DnsModeDeterminator.RESOLVERS_SUPPORT_ONLY_UNENCRYPTED,
+                                                            [DnsProxyMode.UDP,
+                                                             DnsProxyMode.TCP,
+                                                             DnsProxyMode.TCP_FRAG,
+                                                             DnsProxyMode.LAST_RESPONSE])
+        return _res
 
+    # TODO: refine these lists based on what servers actually support
 
-    # list of all resolvers by supported mode
-    # very wordy but eases adding and removal of single servers
-    # order implies which is used first
-    RESOLVERS: list[DnsResolver] = parse_resolvers([
+    # resolvers that support UDP/TPC/DoT/DoH/DoH3/DoQ
+    RESOLVERS_SUPPORT_ALL: list[DnsResolvers] = [DnsResolvers.ADGUARD_1,
+                                                 DnsResolvers.ADGUARD_2,
+                                                 DnsResolvers.ADGUARD_UNFILTERED_1,
+                                                 DnsResolvers.ADGUARD_UNFILTERED_2,
+                                                 DnsResolvers.ADGUARD_FAMILY_1,
+                                                 DnsResolvers.ADGUARD_FAMILY_2]
 
-        # DOH
-        (DnsProxyMode.DOH, "Cloudflare 1", CLOUDFLARE_DNS_1, Port.DOH.value),
-        (DnsProxyMode.DOH, "Cloudflare 2", CLOUDFLARE_DNS_2, Port.DOH.value),
-        (DnsProxyMode.DOH, "Google 1", GOOGLE_DNS_1, Port.DOH.value),
-        (DnsProxyMode.DOH, "Google 2", GOOGLE_DNS_2, Port.DOH.value),
-        (DnsProxyMode.DOH, "Quad 9", QUAD_9_DNS, Port.DOH.value),
+    # resolvers that support UDP/TCP/DoT/DoH/DoH3 but no DoQ
+    RESOLVERS_SUPPORT_ALL_EXCEPT_DOQ: list[DnsResolvers] = [DnsResolvers.CLEAN_BROWSING_FAMILY_1,
+                                                            DnsResolvers.CLEAN_BROWSING_FAMILY_2,
+                                                            DnsResolvers.CLEAN_BROWSING_UNFILTERED_1,
+                                                            DnsResolvers.CLEAN_BROWSING_UNFILTERED_2,
+                                                            DnsResolvers.CLEAN_BROWSING_SECURITY_1,
+                                                            DnsResolvers.CLEAN_BROWSING_SECURITY_2,
+                                                            DnsResolvers.CLOUDFLARE_1,
+                                                            DnsResolvers.CLOUDFLARE_2,
+                                                            DnsResolvers.CLOUDFLARE_SECURITY_1,
+                                                            DnsResolvers.CLOUDFLARE_SECURITY_2,
+                                                            DnsResolvers.CLOUDFLARE_FAMILY_1,
+                                                            DnsResolvers.CLOUDFLARE_FAMILY_2,
+                                                            DnsResolvers.GOOGLE_1,
+                                                            DnsResolvers.GOOGLE_2,
+                                                            DnsResolvers.CISCO_1,
+                                                            DnsResolvers.CISCO_2,
+                                                            DnsResolvers.CISCO_FAMILY_1,
+                                                            DnsResolvers.CISCO_FAMILY_2,
+                                                            DnsResolvers.CISCO_SANDBOX_1,
+                                                            DnsResolvers.CISCO_SANDBOX_2,
+                                                            DnsResolvers.QUAD_9_1,
+                                                            DnsResolvers.QUAD_9_2,
+                                                            DnsResolvers.QUAD_9_EDNS_1,
+                                                            DnsResolvers.QUAD_9_EDNS_2,
+                                                            DnsResolvers.QUAD_9_UNSECURED_1,
+                                                            DnsResolvers.QUAD_9_UNSECURED_2,
+                                                            DnsResolvers.YANDEX_1,
+                                                            DnsResolvers.YANDEX_2,
+                                                            DnsResolvers.YANDEX_SAFE_1,
+                                                            DnsResolvers.YANDEX_SAFE_2,
+                                                            DnsResolvers.YANDEX_FAMILY_1,
+                                                            DnsResolvers.YANDEX_FAMILY_2]
 
-        # DOH3
-        (DnsProxyMode.DOH3, "Cloudflare 1", CLOUDFLARE_DNS_1, Port.DOH3.value),
-        (DnsProxyMode.DOH3, "Cloudflare 2", CLOUDFLARE_DNS_2, Port.DOH3.value),
-        (DnsProxyMode.DOH3, "Google 1", GOOGLE_DNS_1, Port.DOH3.value),
-        (DnsProxyMode.DOH3, "Google 2", GOOGLE_DNS_2, Port.DOH3.value),
-        (DnsProxyMode.DOH3, "Quad 9", QUAD_9_DNS, Port.DOH3.value),
+    # resolvers that support DoT/DoH/DoH3
+    RESOLVERS_SUPPORT_ENCRYPTED_EXCEPT_DOQ: list[DnsResolvers] = [DnsResolvers.WIKIMEDIA,
+                                                                  DnsResolvers.MULLVAD,
+                                                                  DnsResolvers.MULLVAD_ADBLOCK,
+                                                                  DnsResolvers.MULLVAD_BASE,
+                                                                  DnsResolvers.MULLVAD_EXTENDED,
+                                                                  DnsResolvers.MULLVAD_FAMILY,
+                                                                  DnsResolvers.MULLVAD_ALL]
 
-        # TCP
-        (DnsProxyMode.TCP, "Cloudflare 1", CLOUDFLARE_DNS_1, Port.DNS.value),
-        (DnsProxyMode.TCP, "Cloudflare 2", CLOUDFLARE_DNS_2, Port.DNS.value),
-        (DnsProxyMode.TCP, "Google 1", GOOGLE_DNS_1, Port.DNS.value),
-        (DnsProxyMode.TCP, "Google 2", GOOGLE_DNS_2, Port.DNS.value),
-        (DnsProxyMode.TCP, "Quad 9", QUAD_9_DNS, Port.DNS.value),
+    # resolvers that support UDP/TCP
+    RESOLVERS_SUPPORT_ONLY_UNENCRYPTED: list[DnsResolvers] = [DnsResolvers.G_CORE_1,
+                                                              DnsResolvers.G_CORE_2]
 
-        # DOT
-        (DnsProxyMode.DOT, "Cloudflare 1", CLOUDFLARE_DNS_1, Port.DOT.value),
-        (DnsProxyMode.DOT, "Cloudflare 2", CLOUDFLARE_DNS_2, Port.DOT.value),
-        (DnsProxyMode.DOT, "Google 1", GOOGLE_DNS_1, Port.DOT.value),
-        (DnsProxyMode.DOT, "Google 2", GOOGLE_DNS_2, Port.DOT.value),
-        (DnsProxyMode.DOT, "Quad 9", QUAD_9_DNS, Port.DOT.value),
-
-        # DOQ
-        (DnsProxyMode.DOQ, "Cloudflare 1", CLOUDFLARE_DNS_1, Port.DOQ.value),
-        (DnsProxyMode.DOQ, "Cloudflare 2", CLOUDFLARE_DNS_2, Port.DOQ.value),
-        (DnsProxyMode.DOQ, "Google 1", GOOGLE_DNS_1, Port.DOQ.value),
-        (DnsProxyMode.DOQ, "Google 2", GOOGLE_DNS_2, Port.DOQ.value),
-        (DnsProxyMode.DOQ, "Quad 9", QUAD_9_DNS, Port.DOQ.value),
-
-        # UDP
-        (DnsProxyMode.UDP, "Cloudflare 1", CLOUDFLARE_DNS_1, Port.DNS.value),
-        (DnsProxyMode.UDP, "Cloudflare 2", CLOUDFLARE_DNS_2, Port.DNS.value),
-        (DnsProxyMode.UDP, "Google 1", GOOGLE_DNS_1, Port.DNS.value),
-        (DnsProxyMode.UDP, "Google 2", GOOGLE_DNS_2, Port.DNS.value),
-        (DnsProxyMode.UDP, "Quad 9", QUAD_9_DNS, Port.DNS.value),
+    CUSTOM_RESOLVERS: list[DnsResolver] = parse_custom_resolvers([
 
         #########################################################
         #                                                       #
@@ -98,60 +157,82 @@ class DnsModeDeterminator:
         #                                                       #
         #########################################################
 
-        # e.g. a DoT server under 127.0.0.1:1234
+        # each server need the supported proxy mode, a name, the IP address, and a port
 
+        # e.g. a DoT server under 127.0.0.1:1234
         # (DnsProxyMode.DOT, "My Server", "127.0.0.1", 1234),
 
     ])
 
+    # TODO: make specifiable
+    CENSORED_DOMAIN = "wikipedia.org"
+    CORRECT_IP = "185.15.59.224"
+
+    EXAMPLE_REQUEST = make_query(CENSORED_DOMAIN, "A")
+
     def __init__(self, timeout: int):
+        """
+        :param timeout: timeout for DNS requests
+        """
+
         self.timeout = timeout
+        self.resolvers: list[DnsResolver] = DnsModeDeterminator.generate_resolvers()
 
+    def generate_domain_resolver(self) -> DomainResolver:
+        """
+        Generates a domain resolver configured with a working mode. To this end, automatically determines a working mode first.
+        """
+        try:
+            working_resolver: DnsResolver = next(self.determine_working_resolver())
+        except StopIteration:
+            raise DnsException("Could not find any working resolver!")
+        else:
+            return DomainResolver(dns_mode=working_resolver.mode,
+                                  resolver=working_resolver.address,
+                                  timeout=self.timeout)
 
-    def determine_mode(self) -> DomainResolver:
+    def determine_all_modes(self) -> list[DnsResolver]:
         """
         Automatically determines a working circumvention method. Throws an exception if none is found.
-        :return: A DomainResolver object configured with working circumvention methods
+        :return: A list of all DnsResolvers that function.
         """
+        return [x for x in self.determine_working_resolver()]
 
+    def determine_working_resolver(self):
+        """
+        Generator that yields all woking DnsResolvers.
+        """
         # determine all working encrypted DNS modes
-        working_encrypted_dns = []
-        for encrypted_dns in [DnsProxyMode.DOT, DnsProxyMode.DOQ, DnsProxyMode.DOH, DnsProxyMode.DOH3]:
-            working_encrypted_dns += self.determine_encrypted_dns_servers_for_mode(encrypted_dns)
-        print("\n".join(map(lambda x:str(x), working_encrypted_dns)))
+        yield from self.determine_encrypted_dns_resolvers()
+        yield from self.determine_resolvers_supporting_mode(mode=DnsProxyMode.UDP, validate_ip=True)
+        yield from self.determine_resolvers_supporting_mode(mode=DnsProxyMode.TCP, validate_ip=True)
+        yield from  self.determine_resolvers_supporting_mode(mode=DnsProxyMode.TCP_FRAG, validate_ip=False)
+        yield from  self.determine_resolvers_supporting_mode(mode=DnsProxyMode.LAST_RESPONSE, validate_ip=False)
 
-        # determine all TCP and TCP frag servers
-        # TODO: continue here: require a correct hostname and IP combination
-        working_tcp = []
-        exit()
-
-    def determine_encrypted_dns_servers_for_mode(self, mode: DnsProxyMode) -> list[DnsResolver]:
+    def determine_resolvers_supporting_mode(self, mode: DnsProxyMode, validate_ip: bool):
         """
-        Determines all reachable DNS servers that support the given mode.
-        :param mode: DnsProxyMode the reachable servers should support. Must be DOQ, DOT, DOH, or DOH3
+        Generator function that determines all reachable DNS resolvers for the specified mode. If validate_ip is True, the DNS resolver must respond with a pre-defined IP address.
         """
-        _res = []
-        # determine correct resolution method
-        if mode == DnsProxyMode.DOT:
-            _resolve_method = DomainResolver.resolve_dot_static
-        elif mode == DnsProxyMode.DOQ:
-            _resolve_method = DomainResolver.resolve_doq_static
-        elif mode == DnsProxyMode.DOH:
-            _resolve_method = DomainResolver.resolve_doh_static
-        elif mode == DnsProxyMode.DOH3:
-            _resolve_method = DomainResolver.resolve_doh3_static
-        else:
-            logging.error(f"Mode {mode} not encrypted DNS.")
-            return _res
-
-        for resolver in filter(lambda _resolver: _resolver.mode == mode, DnsModeDeterminator.RESOLVERS):
+        for resolver in filter(lambda _resolver: _resolver.mode == mode, self.resolvers):
             logging.debug(f"Trying to resolve {resolver.name} for mode {resolver.mode}")
             try:
-                _resolve_method(message=DnsModeDeterminator.EXAMPLE_REQUEST, resolver=resolver.address,
-                                              timeout=self.timeout)
+                answer = DomainResolver.resolve_static(mode=mode, message=DnsModeDeterminator.EXAMPLE_REQUEST, resolver=resolver.address, timeout=self.timeout)
             except Exception as e:
-                logging.debug(f"Could not resolve to {resolver.name} for mode {resolver.mode}")
+                logging.debug(f"Could not resolve to {resolver.name} for mode {resolver.mode} with exception {e}")
             else:
-                logging.debug(f"Successfully resolved to {resolver.name} for mode {resolver.mode}")
-                _res += [resolver]
-        return _res
+                if validate_ip:
+                    if DnsModeDeterminator.assert_correct_ip(answer, DnsModeDeterminator.CORRECT_IP):
+                        logging.debug(f"Successfully resolved to {resolver.name} for mode {resolver.mode}")
+                        yield resolver
+                    else:
+                        print(f"Could not resolve to {resolver.name} for mode {resolver.mode}")
+                else:
+                    logging.debug(f"Successfully resolved to {resolver.name} for mode {resolver.mode}")
+                    yield resolver
+
+    def determine_encrypted_dns_resolvers(self):
+        """
+        Generator that determines all reachable DNS servers that support any kind of encrypted DNS.
+        """
+        for mode in [DnsProxyMode.DOT, DnsProxyMode.DOH, DnsProxyMode.DOH3, DnsProxyMode.DOQ]:
+            yield from self.determine_resolvers_supporting_mode(mode=mode, validate_ip=False)
