@@ -178,12 +178,13 @@ class DnsModeDeterminator:
         self.timeout = timeout
         self.resolvers: list[DnsResolver] = DnsModeDeterminator.generate_resolvers()
 
-    def generate_domain_resolver(self) -> DomainResolver:
+    def generate_domain_resolver(self, mode: DnsProxyMode = None) -> DomainResolver:
         """
-        Generates a domain resolver configured with a working mode. To this end, automatically determines a working mode first.
+        Generates a domain resolver configured with a working mode. To this end, automatically determines a working mode first
+        :param mode: Restricts resolver generation to the specified mode.
         """
         try:
-            working_resolver: DnsResolver = next(self.determine_working_resolver())
+            working_resolver: DnsResolver = next(self.determine_working_resolver(mode))
         except StopIteration:
             raise DnsException("Could not find any working resolver!")
         else:
@@ -198,16 +199,18 @@ class DnsModeDeterminator:
         """
         return [x for x in self.determine_working_resolver()]
 
-    def determine_working_resolver(self):
+    def determine_working_resolver(self, mode: DnsProxyMode = None):
         """
         Generator that yields all woking DnsResolvers.
+        :param mode: Restricts resolver generation to the specified mode.
         """
-        # determine all working encrypted DNS modes
-        yield from self.determine_encrypted_dns_resolvers()
-        yield from self.determine_resolvers_supporting_mode(mode=DnsProxyMode.UDP, validate_ip=True)
-        yield from self.determine_resolvers_supporting_mode(mode=DnsProxyMode.TCP, validate_ip=True)
-        yield from  self.determine_resolvers_supporting_mode(mode=DnsProxyMode.TCP_FRAG, validate_ip=False)
-        yield from  self.determine_resolvers_supporting_mode(mode=DnsProxyMode.LAST_RESPONSE, validate_ip=False)
+        for _mode in [DnsProxyMode.DOT, DnsProxyMode.DOH, DnsProxyMode.DOH3, DnsProxyMode.DOQ]:
+            if mode is None or mode == _mode:
+                yield from self.determine_resolvers_supporting_mode(mode=_mode, validate_ip=False)
+        for _mode in [DnsProxyMode.UDP, DnsProxyMode.TCP, DnsProxyMode.TCP_FRAG, DnsProxyMode.LAST_RESPONSE]:
+            if mode is None or mode == _mode:
+                yield from self.determine_resolvers_supporting_mode(mode=_mode, validate_ip=True)
+
 
     def determine_resolvers_supporting_mode(self, mode: DnsProxyMode, validate_ip: bool):
         """
@@ -229,10 +232,3 @@ class DnsModeDeterminator:
                 else:
                     logging.debug(f"Successfully resolved to {resolver.name} for mode {resolver.mode}")
                     yield resolver
-
-    def determine_encrypted_dns_resolvers(self):
-        """
-        Generator that determines all reachable DNS servers that support any kind of encrypted DNS.
-        """
-        for mode in [DnsProxyMode.DOT, DnsProxyMode.DOH, DnsProxyMode.DOH3, DnsProxyMode.DOQ]:
-            yield from self.determine_resolvers_supporting_mode(mode=mode, validate_ip=False)
