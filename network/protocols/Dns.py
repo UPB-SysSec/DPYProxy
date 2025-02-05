@@ -19,7 +19,6 @@ class Dns:
             return dns.message.from_wire(message)
         except Exception as e:
             raise DnsException(f"Could not parse DNS message: {e}")
-        pass
 
 
     @staticmethod

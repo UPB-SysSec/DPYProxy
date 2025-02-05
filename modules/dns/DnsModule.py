@@ -43,13 +43,25 @@ class DnsModule(Module):
                                 default=None,
                                 help='DNS resolver port. If set, must correspond to the selected dns_mode. If unset, port is chosen based on the chosen or determined mode\'s standard port')
 
-        dns_module.add_argument('--dns')
+        dns_module.add_argument('--dns_censored_domain', type=str,
+                                default="wikipedia.org",
+                                # TODO: add .txt document with example values for varying countries
+                                help='A domain name censored in your location. Used to determine working circumventions methods. Specify together with --dns_censored_domain_ip')
+
+        dns_module.add_argument('--dns_censored_domain_ip', type=str,
+                                default='185.15.59.224',
+                                help='The correct IP of the given domain given in --dns_censored_domain.')
 
 
     def extract_parameters(self, args: Namespace):
         server_address = NetworkAddress(args.dns_host, args.dns_port)
         resolver_address = NetworkAddress(args.dns_resolver_host, args.dns_port)
-        self.proxy = DnsProxy(server_address, args.dns_timeout, args.dns_mode, resolver_address)
+        self.proxy = DnsProxy(proxy_mode=args.dns_mode,
+                              address=server_address,
+                              timeout=args.dns_timeout,
+                              dns_resolver_address=resolver_address,
+                              censored_domain=args.dns_censored_domain,
+                              censored_domain_ip=args.dns_censored_domain_ip)
 
     def start(self):
         self.proxy.start()

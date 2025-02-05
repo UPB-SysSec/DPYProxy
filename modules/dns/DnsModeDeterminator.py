@@ -18,27 +18,6 @@ class DnsModeDeterminator:
     """
 
     @staticmethod
-    def assert_correct_ip(answer: dns.message.Message, ip: str) -> bool:
-        """
-        Determines whether the given DNS response contains the given IP in its answer section.
-        """
-        # TODO: handle multiple IPs in answer?
-        # extract IP from answer
-        try:
-            resolved_address = list(answer.answer[0].items.keys())[0].address
-        except Exception as e:
-            logging.debug(
-                f"Could not extract answer record from received DNS response with exception {e}:\n{answer}")
-            return False
-        else:
-            if resolved_address != ip:
-                logging.debug(
-                    f"Received {resolved_address} instead of {ip}")
-                return False
-            else:
-                return True
-
-    @staticmethod
     def parse_custom_resolvers(resolvers: list[tuple[DnsProxyMode, str, str, int]]) -> list[DnsResolver]:
         """
         Parses a list of custom resolvers (tuple of ProxyMode, name, ip, port) into DnsResolver objects.
@@ -164,18 +143,17 @@ class DnsModeDeterminator:
 
     ])
 
-    # TODO: make specifiable
-    CENSORED_DOMAIN = "wikipedia.org"
-    CORRECT_IP = "185.15.59.224"
-
-    EXAMPLE_REQUEST = make_query(CENSORED_DOMAIN, "A")
-
-    def __init__(self, timeout: int):
+    def __init__(self, timeout: int, censored_domain: str, censored_domain_ip: str):
         """
         :param timeout: timeout for DNS requests
+        :param censored_domain: censored domain
+        :param censored_domain_ip: correct ip of the censored domain
         """
 
         self.timeout = timeout
+        self.censored_domain = censored_domain
+        self.censored_domain_ip = censored_domain_ip
+        self.censored_request = make_query(censored_domain, "A")
         self.resolvers: list[DnsResolver] = DnsModeDeterminator.generate_resolvers()
 
     def generate_domain_resolver(self, mode: DnsProxyMode = None) -> DomainResolver:
@@ -219,12 +197,12 @@ class DnsModeDeterminator:
         for resolver in filter(lambda _resolver: _resolver.mode == mode, self.resolvers):
             logging.debug(f"Trying to resolve {resolver.name} for mode {resolver.mode}")
             try:
-                answer = DomainResolver.resolve_static(mode=mode, message=DnsModeDeterminator.EXAMPLE_REQUEST, resolver=resolver.address, timeout=self.timeout)
+                answer = DomainResolver.resolve_static(mode=mode, message=self.censored_request, resolver=resolver.address, timeout=self.timeout)
             except Exception as e:
                 logging.debug(f"Could not resolve to {resolver.name} for mode {resolver.mode} with exception {e}")
             else:
                 if validate_ip:
-                    if DnsModeDeterminator.assert_correct_ip(answer, DnsModeDeterminator.CORRECT_IP):
+                    if DnsModeDeterminator.assert_correct_ip(answer):
                         logging.debug(f"Successfully resolved to {resolver.name} for mode {resolver.mode}")
                         yield resolver
                     else:
@@ -232,3 +210,24 @@ class DnsModeDeterminator:
                 else:
                     logging.debug(f"Successfully resolved to {resolver.name} for mode {resolver.mode}")
                     yield resolver
+
+    def assert_correct_ip(self, answer: dns.message.Message) -> bool:
+        """
+        Determines whether the given DNS response contains the given IP in its answer section.
+        :param answer: The DNS response to check.
+        """
+        # TODO: handle multiple IPs in answer?
+        # extract IP from answer
+        try:
+            resolved_address = list(answer.answer[0].items.keys())[0].address
+        except Exception as e:
+            logging.debug(
+                f"Could not extract answer record from received DNS response with exception {e}:\n{answer}")
+            return False
+        else:
+            if resolved_address != self.censored_domain_ip:
+                logging.debug(
+                    f"Received {resolved_address} instead of {self.censored_domain_ip}")
+                return False
+            else:
+                return True
