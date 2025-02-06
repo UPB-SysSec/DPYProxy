@@ -4,7 +4,6 @@ import dns.message
 
 from enumerators.DnsProxyMode import DnsProxyMode
 from enumerators.DnsResolvers import DnsResolvers
-from exception.DnsException import DnsException
 from modules.dns.DnsResolver import DnsResolver
 from network.DomainResolver import DomainResolver
 from network.NetworkAddress import NetworkAddress
@@ -156,41 +155,27 @@ class DnsModeDeterminator:
         self.censored_request = make_query(censored_domain, "A")
         self.resolvers: list[DnsResolver] = DnsModeDeterminator.generate_resolvers()
 
-    def generate_domain_resolver(self, mode: DnsProxyMode = None) -> DomainResolver:
-        """
-        Generates a domain resolver configured with a working mode. To this end, automatically determines a working mode first
-        :param mode: Restricts resolver generation to the specified mode.
-        """
-        try:
-            working_resolver: DnsResolver = next(self.determine_working_resolver(mode))
-        except StopIteration:
-            raise DnsException("Could not find any working resolver!")
-        else:
-            return DomainResolver(dns_mode=working_resolver.mode,
-                                  resolver=working_resolver.address,
-                                  timeout=self.timeout)
-
     def determine_all_modes(self) -> list[DnsResolver]:
         """
         Automatically determines a working circumvention method. Throws an exception if none is found.
         :return: A list of all DnsResolvers that function.
         """
-        return [x for x in self.determine_working_resolver()]
+        return [x for x in self.generate_working_resolver()]
 
-    def determine_working_resolver(self, mode: DnsProxyMode = None):
+    def generate_working_resolver(self, mode: DnsProxyMode = None):
         """
-        Generator that yields all woking DnsResolvers.
+        Generator that yields all working DnsResolvers.
         :param mode: Restricts resolver generation to the specified mode.
         """
         for _mode in [DnsProxyMode.DOT, DnsProxyMode.DOH, DnsProxyMode.DOH3, DnsProxyMode.DOQ]:
             if mode is None or mode == _mode:
-                yield from self.determine_resolvers_supporting_mode(mode=_mode, validate_ip=False)
+                yield from self.generate_resolvers_supporting_mode(mode=_mode, validate_ip=False)
         for _mode in [DnsProxyMode.UDP, DnsProxyMode.TCP, DnsProxyMode.TCP_FRAG, DnsProxyMode.LAST_RESPONSE]:
             if mode is None or mode == _mode:
-                yield from self.determine_resolvers_supporting_mode(mode=_mode, validate_ip=True)
+                yield from self.generate_resolvers_supporting_mode(mode=_mode, validate_ip=True)
 
 
-    def determine_resolvers_supporting_mode(self, mode: DnsProxyMode, validate_ip: bool):
+    def generate_resolvers_supporting_mode(self, mode: DnsProxyMode, validate_ip: bool):
         """
         Generator function that determines all reachable DNS resolvers for the specified mode. If validate_ip is True, the DNS resolver must respond with a pre-defined IP address.
         """

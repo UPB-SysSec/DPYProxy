@@ -32,6 +32,8 @@ class DomainResolver:
     """
 
     DNS_TCP_FRAG_SIZE = 20
+    THRESHOLD_CONFIRM_WORKING = 3
+    TRIES_CONFIRM_WORKING = 5
 
     def __init__(self,
                  dns_mode: DnsProxyMode,
@@ -209,3 +211,21 @@ class DomainResolver:
         timeout and frag size.
         """
         return DomainResolver.resolve_static(mode=self.dns_mode, message=message, resolver=self.resolver, timeout=self.timeout, frag_size=self.tcp_frag_size)
+
+    def works(self, message: Message) -> bool:
+        """
+        Determines if the configures resolver is consistently reachable, returns true if at least 3 out of 5 connection
+        attempts worked.
+        """
+        working = 0
+        for _ in range(DomainResolver.TRIES_CONFIRM_WORKING):
+            try:
+                self.resolve(message=message)
+            except DnsException as _:
+                pass
+            else:
+                working += 1
+        return working >= DomainResolver.THRESHOLD_CONFIRM_WORKING
+
+    def __str__(self):
+        return f"{self.dns_mode} - {self.resolver}"

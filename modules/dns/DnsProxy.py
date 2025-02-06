@@ -4,12 +4,13 @@ import socket
 import threading
 import traceback
 
-from dns.message import Message
+from dns.message import Message, make_query
 from dns.rcode import SERVFAIL
 
 from enumerators.DnsProxyMode import DnsProxyMode
 from exception.DnsException import DnsException
 from modules.dns.DnsModeDeterminator import DnsModeDeterminator
+from modules.dns.DnsResolver import DnsResolver
 from network.DomainResolver import DomainResolver
 from network.NetworkAddress import NetworkAddress
 from network.protocols.Dns import Dns
@@ -94,40 +95,81 @@ class DnsProxy:
                 f"{address.host}:{address.port}: Successfully resolved Dns message using mode {self.proxy_mode}. Sending answer to client:\n{answer}")
         return answer
 
+    def generate_domain_resolver(self):
+        """
+        Generator that yields a new DomainResolver based on the CLI configuration.
+        """
+        if self.proxy_mode == DnsProxyMode.AUTO:
+            _gen = DnsModeDeterminator(self.timeout, self.censored_domain,
+                                self.censored_domain_ip).generate_working_resolver()
+            yield from _gen
+
+        elif self.resolver_address.host is None:
+            _gen = DnsModeDeterminator(self.timeout, self.censored_domain,
+                                self.censored_domain_ip).generate_working_resolver(self.proxy_mode)
+            yield from _gen
+
+        elif self.resolver_address.port is not None:
+            logging.info(
+                f"mode {self.proxy_mode} and resolver {self.resolver_address.host} specified. Setting standard port {self.proxy_mode.default_port()}.")
+            # mode and resolver specified, set standard port accordingly
+            yield DomainResolver(dns_mode=self.proxy_mode,
+                                 resolver=NetworkAddress(self.resolver_address.host,
+                                                         self.proxy_mode.default_port()),
+                                 timeout=self.timeout)
+        else:
+            logging.info(
+                f"mode {self.proxy_mode} and resolver {self.resolver_address.host}:{self.resolver_address.port} specified. Using these values.")
+            # mode, resolver, and port specified
+            yield DomainResolver(dns_mode=self.proxy_mode,
+                                 resolver=self.resolver_address,
+                                 timeout=self.timeout)
+
+
+
+    def configure(self):
+        """
+        Determines a working domain resolver / circumvention method based on the CLI configuration.
+        """
+        logging.info("Determining working circumvention method / resolver!")
+        found_working = False
+        domain_resolver_generator = self.generate_domain_resolver()
+
+        while not found_working:
+            # determine next possible resolver
+            try:
+                dns_resolver: DnsResolver = next(domain_resolver_generator)
+                domain_resolver: DomainResolver = DomainResolver(dns_mode=dns_resolver.mode,
+                                                                 resolver=dns_resolver.address,
+                                                                 timeout=self.timeout)
+            except StopIteration:
+                raise DnsException("No working circumvention method found according to specification in CLI.")
+
+            # determine if it is working
+            logging.info(f"Found working circumvention method / resolver {domain_resolver}! Checking of consistently reachable!")
+            found_working  = domain_resolver.works(message=make_query(self.censored_domain, "A"))
+            if not found_working:
+                logging.info(f"{domain_resolver} not consistently reachable, attempting to generate new resolver.")
+            else:
+                logging.info(f"{domain_resolver} consistently reachable, keeping!")
+                self.domain_resolver = domain_resolver
+                self.proxy_mode = self.domain_resolver.dns_mode
+
+
+
     def start(self):
         """
-        Starts the proxy. After calling the proxy is listening for connections.
+        Starts the proxy. After calling the proxy, listens for connections.
         """
-        # TODO: implement failsafe mechanism. I.e., require more than one connection to success, also for user provided values.
         try:
-            if self.proxy_mode == DnsProxyMode.AUTO:
-                # determine mode and resolver automatically
-                logging.info("AUTO mode set. Determining mode, and resolver automatically.")
-                self.domain_resolver = DnsModeDeterminator(self.timeout, self.censored_domain, self.censored_domain_ip).generate_domain_resolver()
-            elif self.resolver_address.host is None:
-                # determine resolver for selected mode automatically
-                logging.info(f"mode {self.proxy_mode} specified. Determining resolver automatically.")
-                self.domain_resolver = DnsModeDeterminator(self.timeout, self.censored_domain, self.censored_domain_ip).generate_domain_resolver(self.proxy_mode)
-            elif self.resolver_address.port is not None:
-                logging.info(f"mode {self.proxy_mode} and resolver {self.resolver_address.host} specified. Setting standard port {self.proxy_mode.default_port()}.")
-                # mode and resolver specified, set standard port accordingly
-                self.domain_resolver = DomainResolver(dns_mode=self.proxy_mode,
-                                                      resolver=NetworkAddress(self.resolver_address.host, self.proxy_mode.default_port()),
-                                                      timeout=self.timeout)
-            else:
-                # mode, resolver, and port specified
-                logging.info(f"mode {self.proxy_mode} and resolver {self.resolver_address.host}:{self.resolver_address.port} specified. Using these values.")
-                self.domain_resolver = DomainResolver(dns_mode=self.proxy_mode,
-                                                      resolver=self.resolver_address,
-                                                      timeout=self.timeout)
-            self.proxy_mode = self.domain_resolver.dns_mode
-        except Exception as e:
-            logging.error(f"Could not create DomainResolver with exception: {e}")
-            return
-
-        # start tcp and udp DNS server
-        threading.Thread(target=self.start_udp_server).start()
-        threading.Thread(target=self.start_tcp_server).start()
+            # determine circumvention method
+            self.configure()
+        except DnsException as e:
+            logging.error(f"{e}")
+        else:
+            # start tcp and udp DNS server
+            threading.Thread(target=self.start_udp_server).start()
+            threading.Thread(target=self.start_tcp_server).start()
 
 
     def start_udp_server(self):

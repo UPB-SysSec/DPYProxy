@@ -11,7 +11,7 @@ from modules.Module import Module
 def extract_activated_modules(parser: ArgumentParser) -> list[Module]:
 
     def list_of_modules(arg):
-        return list(map(lambda x: Modules(x), arg.split(",")))
+        return list(map(lambda x: Modules.__getitem__(x), arg.split(",")))
 
     general = parser.add_argument_group('Standard options')
 
@@ -24,7 +24,7 @@ def extract_activated_modules(parser: ArgumentParser) -> list[Module]:
                          help="Turns on debugging")
 
     general.add_argument('--disabled_modules', type=list_of_modules,
-    # TODO re-add                      choices=Modules,
+                         # choices=Modules,
                          default=[],
                          help='List of proxy modules to disable. By default, all none are disabled. Hence, all are enabled')
 
