@@ -102,7 +102,6 @@ class DomainResolver:
         :return: The Dns response by the resolver
         """
         # TODO: check quic support through aioquic dependency
-        # TODO: currently does not work with adguard: debug
         return quic(message, where=resolver.host, port=resolver.port, timeout = timeout)
 
     @staticmethod
