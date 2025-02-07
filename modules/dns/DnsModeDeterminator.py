@@ -187,7 +187,7 @@ class DnsModeDeterminator:
                 logging.debug(f"Could not resolve to {resolver.name} for mode {resolver.mode} with exception {e}")
             else:
                 if validate_ip:
-                    if DnsModeDeterminator.assert_correct_ip(answer):
+                    if self.assert_correct_ip(answer):
                         logging.debug(f"Successfully resolved to {resolver.name} for mode {resolver.mode}")
                         yield resolver
                     else:
