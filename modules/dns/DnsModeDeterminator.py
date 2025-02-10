@@ -155,13 +155,6 @@ class DnsModeDeterminator:
         self.censored_request = make_query(censored_domain, "A")
         self.resolvers: list[DnsResolver] = DnsModeDeterminator.generate_resolvers()
 
-    def determine_all_modes(self) -> list[DnsResolver]:
-        """
-        Automatically determines a working circumvention method. Throws an exception if none is found.
-        :return: A list of all DnsResolvers that function.
-        """
-        return [x for x in self.generate_working_resolver()]
-
     def generate_working_resolver(self, mode: DnsProxyMode = None):
         """
         Generator that yields all working DnsResolvers.

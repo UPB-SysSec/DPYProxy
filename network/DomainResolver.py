@@ -102,6 +102,7 @@ class DomainResolver:
         :return: The Dns response by the resolver
         """
         # TODO: check quic support through aioquic dependency
+        
         return quic(message, where=resolver.host, port=resolver.port, timeout = timeout)
 
     @staticmethod
