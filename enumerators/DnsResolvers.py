@@ -41,11 +41,11 @@ class DnsResolvers(Enum):
 
     # Mullvad https://mullvad.net/en/help/dns-over-https-and-dns-over-tls
     MULLVAD = "194.242.2.2"
-    MULLVAD_ADBLOCK = "194.242.2.2"
-    MULLVAD_BASE = "194.242.2.2"
-    MULLVAD_EXTENDED = "194.242.2.2"
-    MULLVAD_FAMILY = "194.242.2.2"
-    MULLVAD_ALL = "194.242.2.2"
+    MULLVAD_ADBLOCK = "194.242.2.3"
+    MULLVAD_BASE = "194.242.2.4"
+    MULLVAD_EXTENDED = "194.242.2.5"
+    MULLVAD_FAMILY = "194.242.2.6"
+    MULLVAD_ALL = "194.242.2.9"
 
     # Cisco https://umbrella.cisco.com/blog/enhancing-support-dns-encryption-with-dns-over-https
     CISCO_1 = "208.67.222.222"
