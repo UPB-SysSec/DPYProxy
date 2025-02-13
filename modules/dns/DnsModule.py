@@ -48,20 +48,21 @@ class DnsModule(Module):
                                 # TODO: add .txt document with example values for varying countries
                                 help='A domain name censored in your location. Used to determine working circumventions methods. Specify together with --dns_censored_domain_ip')
 
-        dns_module.add_argument('--dns_censored_domain_ip', type=str,
-                                default='185.15.59.224',
-                                help='The correct IP of the given domain given in --dns_censored_domain.')
+        dns_module.add_argument('--dns_censored_domain_ip_ranges', type=str,
+                                default='185.15.56.0/22,91.198.174.0/24,195.200.68.0/24,193.46.90.0/24,198.35.26.0/23,208.80.152.0/22,103.102.166.0/24',
+                                help='A list of IP ranges the resolved IP of the censored domain lies in. The censored domain is specifiable in --dns_censored_domain.')
 
 
     def extract_parameters(self, args: Namespace):
         server_address = NetworkAddress(args.dns_host, args.dns_port)
         resolver_address = NetworkAddress(args.dns_resolver_host, args.dns_port)
+
         self.proxy = DnsProxy(proxy_mode=args.dns_mode,
                               address=server_address,
                               timeout=args.dns_timeout,
                               dns_resolver_address=resolver_address,
                               censored_domain=args.dns_censored_domain,
-                              censored_domain_ip=args.dns_censored_domain_ip)
+                              censored_domain_ip_ranges=[x for x in args.dns_censored_domain_ip_ranges.split(",")])
 
     def start(self):
         self.proxy.start()

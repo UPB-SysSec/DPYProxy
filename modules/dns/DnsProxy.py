@@ -27,13 +27,13 @@ class DnsProxy:
                  proxy_mode: DnsProxyMode,
                  dns_resolver_address: NetworkAddress,
                  censored_domain: str,
-                 censored_domain_ip: str):
+                 censored_domain_ip_ranges: list[str]):
                 # timeout for socket reads and message reception
                 self.timeout = timeout
                 self.address = address
                 self.resolver_address = dns_resolver_address
                 self.censored_domain = censored_domain
-                self.censored_domain_ip = censored_domain_ip
+                self.censored_domain_ip_ranges = censored_domain_ip_ranges
                 self.proxy_mode = proxy_mode
 
                 # initialize UDP and TCP server sockets
@@ -101,12 +101,12 @@ class DnsProxy:
         """
         if self.proxy_mode == DnsProxyMode.AUTO:
             _gen = DnsModeDeterminator(self.timeout, self.censored_domain,
-                                self.censored_domain_ip).generate_working_resolver()
+                                self.censored_domain_ip_ranges).generate_working_resolver()
             yield from _gen
 
         elif self.resolver_address.host is None:
             _gen = DnsModeDeterminator(self.timeout, self.censored_domain,
-                                self.censored_domain_ip).generate_working_resolver(self.proxy_mode)
+                                self.censored_domain_ip_ranges).generate_working_resolver(self.proxy_mode)
             yield from _gen
 
         elif self.resolver_address.port is not None:
