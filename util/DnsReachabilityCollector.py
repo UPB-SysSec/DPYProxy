@@ -10,6 +10,7 @@ from modules.dns.DnsModeDeterminator import DnsModeDeterminator
 
 TIMEOUT = 5
 CENSORED_DOMAIN = "wikipedia.org"
+RETRIES = 5
 # wikipedia ranges https://wikitech.wikimedia.org/wiki/IP_and_AS_allocations
 
 WIKIMEDIA_RANGES = [
@@ -29,7 +30,7 @@ def main():
     print("Generating working resolvers... might take a while!")
     _time = time.time()
 
-    for mode in [x for x in _det.generate_working_resolver()]:
+    for mode in [x for x in _det.generate_working_resolver(retries=RETRIES)]:
         print(mode)
 
     print(f"Time taken: {format_time(time.time() - _time)}")

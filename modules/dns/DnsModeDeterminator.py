@@ -164,39 +164,44 @@ class DnsModeDeterminator:
         self.censored_request = make_query(censored_domain, "A")
         self.resolvers: list[DnsResolver] = DnsModeDeterminator.generate_resolvers()
 
-    def generate_working_resolver(self, mode: DnsProxyMode = None):
+    def generate_working_resolver(self, mode: DnsProxyMode = None, retries: int = 5):
         """
         Generator that yields all working DnsResolvers.
         :param mode: Restricts resolver generation to the specified mode.
+        :param retries: Number of retries to determine success by majority voting
         """
         for _mode in [DnsProxyMode.DOT, DnsProxyMode.DOH, DnsProxyMode.DOH3, DnsProxyMode.DOQ]:
             if mode is None or mode == _mode:
-                yield from self.generate_resolvers_supporting_mode(mode=_mode, validate_ip=False)
+                yield from self.generate_resolvers_supporting_mode(mode=_mode, validate_ip=False, retries = retries)
         for _mode in [DnsProxyMode.UDP, DnsProxyMode.TCP, DnsProxyMode.TCP_FRAG, DnsProxyMode.LAST_RESPONSE]:
             if mode is None or mode == _mode:
-                yield from self.generate_resolvers_supporting_mode(mode=_mode, validate_ip=True)
+                yield from self.generate_resolvers_supporting_mode(mode=_mode, validate_ip=True, retries = retries)
 
 
-    def generate_resolvers_supporting_mode(self, mode: DnsProxyMode, validate_ip: bool):
+    def generate_resolvers_supporting_mode(self, mode: DnsProxyMode, validate_ip: bool, retries: int = 5):
         """
         Generator function that determines all reachable DNS resolvers for the specified mode. If validate_ip is True, the DNS resolver must respond with a pre-defined IP address.
         """
         for resolver in filter(lambda _resolver: _resolver.mode == mode, self.resolvers):
             logging.debug(f"Trying to resolve {resolver.name} for mode {resolver.mode}")
-            try:
-                answer = DomainResolver.resolve_static(mode=mode, message=self.censored_request, resolver=resolver.address, timeout=self.timeout)
-            except Exception as e:
-                logging.debug(f"Could not resolve to {resolver.name} for mode {resolver.mode} with exception {e}")
-            else:
-                if validate_ip:
-                    if self.assert_correct_ip(answer):
-                        logging.debug(f"Successfully resolved to {resolver.name} for mode {resolver.mode}")
-                        yield resolver
-                    else:
-                        print(f"Could not resolve to {resolver.name} for mode {resolver.mode}")
+            working_count = 0
+            for i in range(retries):
+                try:
+                    answer = DomainResolver.resolve_static(mode=mode, message=self.censored_request, resolver=resolver.address, timeout=self.timeout)
+                except Exception as e:
+                    logging.debug(f"Could not resolve to {resolver.name} for mode {resolver.mode} with exception {e}")
                 else:
-                    logging.debug(f"Successfully resolved to {resolver.name} for mode {resolver.mode}")
-                    yield resolver
+                    if validate_ip:
+                        if self.assert_correct_ip(answer):
+                            logging.debug(f"Successfully resolved to {resolver.name} for mode {resolver.mode}")
+                            working_count += 1
+                        else:
+                            print(f"Could not resolve to {resolver.name} for mode {resolver.mode}")
+                    else:
+                        logging.debug(f"Successfully resolved to {resolver.name} for mode {resolver.mode}")
+                        working_count += 1
+            if working_count > retries / 2:
+                yield resolver
 
     def assert_correct_ip(self, answer: dns.message.Message) -> bool:
         """
