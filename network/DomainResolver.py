@@ -1,6 +1,8 @@
 import socket
+import ssl
 import time
 
+import httpx
 from dns.exception import Timeout
 from dns.message import Message
 from dns.query import tls, tcp, https, quic, udp, send_udp, receive_udp, HTTPVersion
@@ -55,15 +57,19 @@ class DomainResolver:
 
     @staticmethod
     @fix_transaction_id
-    def resolve_dot_static(message: Message, resolver: NetworkAddress, timeout: int) -> Message:
+    def resolve_dot_static(message: Message, resolver: NetworkAddress, timeout: int, hostname:str) -> Message:
         """
         Resolves the given domain to an ip address using DNS over TLS on the given DNS resolver.
         :param message: the DNS message to resolve
         :param resolver: the DNS resolver to use
         :param timeout: the DNS request timeout
+        :param hostname: the hostname of the DoT server, used in SNI
         :return: The Dns response by the resolver
         """
-        return tls(message, where=resolver.host, port=resolver.port, timeout = timeout)
+        ssl_context = ssl.create_default_context()
+        ssl_context.check_hostname = True  # Enable hostname verification
+        ssl_context.verify_mode = ssl.CERT_REQUIRED  # Require valid cert
+        return tls(message, where=resolver.host, port=resolver.port, timeout=timeout, server_hostname=hostname, verify=True, ssl_context=ssl_context)
 
     @staticmethod
     @fix_transaction_id
@@ -76,7 +82,8 @@ class DomainResolver:
         :return: The Dns response by the resolver
         """
         # TODO: check http support through httpx dependency
-        return https(message, where=resolver.host, port=resolver.port, http_version=HTTPVersion.H2, timeout = timeout)
+        # TODO: SNI
+        return https(message, where=resolver.host, port=resolver.port, http_version=HTTPVersion.H2, timeout = timeout, verify=True)
 
     @staticmethod
     @fix_transaction_id
@@ -89,21 +96,22 @@ class DomainResolver:
         :return: The Dns response by the resolver
         """
         # TODO: check quic support through aioquic dependency
-        return https(message, where=resolver.host, port=resolver.port, http_version=HTTPVersion.H3, timeout = timeout)
+        # TODO: SNI
+        return https(message, where=resolver.host, port=resolver.port, http_version=HTTPVersion.H3, timeout = timeout, verify=True)
 
     @staticmethod
     @fix_transaction_id
-    def resolve_doq_static(message: Message, resolver: NetworkAddress, timeout: int) -> Message:
+    def resolve_doq_static(message: Message, resolver: NetworkAddress, timeout: int, hostname: str) -> Message:
         """
         Resolves the given domain to an ip address using DNS over QUIC on the given DNS resolver.
         :param message: the DNS message to resolve
         :param resolver: the DNS resolver to use
         :param timeout: the DNS request timeout
+        :param hostname: hostname of the DoQ server, used in SNI
         :return: The Dns response by the resolver
         """
         # TODO: check quic support through aioquic dependency
-        
-        return quic(message, where=resolver.host, port=resolver.port, timeout = timeout)
+        return quic(message, where=resolver.host, port=resolver.port, timeout = timeout, server_hostname=hostname, hostname=hostname)
 
     @staticmethod
     def resolve_udp_static(message: Message, resolver: NetworkAddress, timeout: int) -> Message:
@@ -175,7 +183,7 @@ class DomainResolver:
         return last_received
 
     @staticmethod
-    def resolve_static(mode: DnsProxyMode, message: Message, resolver: NetworkAddress, timeout: int, frag_size: int=DNS_TCP_FRAG_SIZE) -> Message:
+    def resolve_static(mode: DnsProxyMode, message: Message, resolver: NetworkAddress, timeout: int, frag_size: int=DNS_TCP_FRAG_SIZE, hostname: str="") -> Message:
         """
         Resolves the requested message based on the selected mode.
         :param mode: the DNS proxy mode to use. Must not be AUTO, will raise a DnsException
@@ -183,17 +191,18 @@ class DomainResolver:
         :param resolver: the DNS resolver
         :param timeout: the DNS request timeout
         :param frag_size: size of the TCP segments used to fragment the DNS message if the mode is TCP_FRAG
+        :param hostname: the hostname of the DNS resolver
         """
         if mode == DnsProxyMode.AUTO:
             raise DnsException("No resolution function for mode AUTO")
         elif mode == DnsProxyMode.DOT:
-            return DomainResolver.resolve_dot_static(message, resolver=resolver, timeout=timeout)
+            return DomainResolver.resolve_dot_static(message, resolver=resolver, timeout=timeout, hostname=hostname)
         elif mode == DnsProxyMode.DOH:
             return DomainResolver.resolve_doh_static(message, resolver=resolver, timeout=timeout)
         elif mode == DnsProxyMode.DOH3:
             return DomainResolver.resolve_doh3_static(message, resolver=resolver, timeout=timeout)
         elif mode == DnsProxyMode.DOQ:
-            return DomainResolver.resolve_doq_static(message, resolver=resolver, timeout=timeout)
+            return DomainResolver.resolve_doq_static(message, resolver=resolver, timeout=timeout, hostname=hostname)
         elif mode == DnsProxyMode.UDP:
             return DomainResolver.resolve_udp_static(message, resolver=resolver, timeout=timeout)
         elif mode == DnsProxyMode.TCP:

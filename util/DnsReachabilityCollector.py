@@ -10,7 +10,7 @@ from modules.dns.DnsModeDeterminator import DnsModeDeterminator
 
 TIMEOUT = 5
 CENSORED_DOMAIN = "wikipedia.org"
-RETRIES = 5
+RETRIES = 10
 # wikipedia ranges https://wikitech.wikimedia.org/wiki/IP_and_AS_allocations
 
 WIKIMEDIA_RANGES = [

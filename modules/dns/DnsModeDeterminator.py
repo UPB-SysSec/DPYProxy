@@ -18,14 +18,14 @@ class DnsModeDeterminator:
     """
 
     @staticmethod
-    def parse_custom_resolvers(resolvers: list[tuple[DnsProxyMode, str, str, int]]) -> list[DnsResolver]:
+    def parse_custom_resolvers(resolvers: list[tuple[DnsProxyMode, str, str, int, str]]) -> list[DnsResolver]:
         """
         Parses a list of custom resolvers (tuple of ProxyMode, name, ip, port) into DnsResolver objects.
         """
         _ret = []
         for resolver in resolvers:
             address = NetworkAddress(resolver[2], resolver[3])
-            _ret += [DnsResolver(resolver[1], address, resolver[0])]
+            _ret += [DnsResolver(resolver[1], address, resolver[0], resolver[4])]
         return _ret
 
     @staticmethod
@@ -39,7 +39,7 @@ class DnsModeDeterminator:
             # call custom resolver method with resolvers default values
            _ret += DnsModeDeterminator.parse_custom_resolvers(
                 list(map(
-                    lambda resolver: (mode, str(resolver.name), str(resolver.value), mode.default_port()), resolvers)))
+                    lambda resolver: (mode, str(resolver.name), str(resolver.value), mode.default_port(), str(resolver.hostname)), resolvers)))
         return _ret
 
     @staticmethod
@@ -187,7 +187,7 @@ class DnsModeDeterminator:
             working_count = 0
             for i in range(retries):
                 try:
-                    answer = DomainResolver.resolve_static(mode=mode, message=self.censored_request, resolver=resolver.address, timeout=self.timeout)
+                    answer = DomainResolver.resolve_static(mode=mode, message=self.censored_request, resolver=resolver.address, timeout=self.timeout, hostname=resolver.hostname)
                 except Exception as e:
                     logging.debug(f"Could not resolve to {resolver.name} for mode {resolver.mode} with exception {e}")
                 else:
