@@ -2,10 +2,12 @@ import socket
 import ssl
 import time
 
+import dns
 import httpx
 from dns.exception import Timeout
 from dns.message import Message
-from dns.query import tls, tcp, https, quic, udp, send_udp, receive_udp, HTTPVersion
+from dns.query import tls, tcp, https, quic, udp, send_udp, receive_udp, HTTPVersion, _http3, _maybe_get_resolver, \
+    _destination_and_source, _HTTPTransport, BadResponse, _compute_times, _remaining, _check_status
 
 from enumerators.DnsProxyMode import DnsProxyMode
 from exception.DnsException import DnsException
@@ -66,38 +68,131 @@ class DomainResolver:
         :param hostname: the hostname of the DoT server, used in SNI
         :return: The Dns response by the resolver
         """
-        ssl_context = ssl.create_default_context()
-        ssl_context.check_hostname = True  # Enable hostname verification
-        ssl_context.verify_mode = ssl.CERT_REQUIRED  # Require valid cert
-        return tls(message, where=resolver.host, port=resolver.port, timeout=timeout, server_hostname=hostname, verify=True, ssl_context=ssl_context)
+        return tls(message, where=resolver.host, port=resolver.port, timeout=timeout, server_hostname=hostname, verify=True)
 
     @staticmethod
     @fix_transaction_id
-    def resolve_doh_static(message: Message, resolver: NetworkAddress, timeout: int) -> Message:
+    def resolve_doh_static(message: Message, resolver: NetworkAddress, timeout: int, hostname: str) -> Message:
         """
         Resolves the given domain to an ip address using DNS over HTTPS on the given DNS resolver.
         :param message: the DNS message to resolve
         :param resolver: the DNS resolver to use
         :param timeout: the DNS request timeout
+        :param hostname: the hostname that TLS should use in SNI
         :return: The Dns response by the resolver
         """
         # TODO: check http support through httpx dependency
-        # TODO: SNI
-        return https(message, where=resolver.host, port=resolver.port, http_version=HTTPVersion.H2, timeout = timeout, verify=True)
+        url=f"https://{resolver.host}:{resolver.port}/dns-query"
+
+        (_, _, the_source) = _destination_and_source(
+            resolver.host, resolver.port, None, 0, False
+        )
+
+        extensions = {}
+        bootstrap_address = resolver.host
+        extensions["sni_hostname"] = hostname
+        q = message
+
+        wire = q.to_wire()
+        headers = {"accept": "application/dns-message"}
+
+        if the_source is None:
+            local_address = None
+            local_port = 0
+        else:
+            local_address = the_source[0]
+            local_port = the_source[1]
+
+        transport = _HTTPTransport(
+            local_address=local_address,
+            http1=False,
+            http2=True,
+            verify=True,
+            local_port=local_port,
+            bootstrap_address=bootstrap_address,
+            resolver=resolver,
+            family=socket.AF_UNSPEC,
+        )
+
+        cm = httpx.Client(http1=False, http2=True, verify=True, transport=transport)
+
+        with cm as session:
+            headers.update(
+                {
+                    "content-type": "application/dns-message",
+                    "content-length": str(len(wire)),
+                }
+            )
+            response = session.post(
+                url,
+                headers=headers,
+                content=wire,
+                timeout=timeout,
+                extensions=extensions,
+            )
+
+        # status code exception
+        if response.status_code < 200 or response.status_code > 299:
+            raise ValueError(
+                f"{resolver.host} responded with status code {response.status_code}"
+                f"\nResponse body: {response.content}"
+            )
+
+        r = dns.message.from_wire(
+            response.content,
+            keyring=q.keyring,
+            request_mac=q.request_mac,
+            one_rr_per_rrset=False,
+            ignore_trailing=False,
+        )
+        r.time = response.elapsed.total_seconds()
+        if not q.is_response(r):
+            raise BadResponse
+        return r
 
     @staticmethod
     @fix_transaction_id
-    def resolve_doh3_static(message: Message, resolver: NetworkAddress, timeout: int) -> Message:
+    def resolve_doh3_static(message: Message, resolver: NetworkAddress, timeout: int, hostname:str) -> Message:
         """
         Resolves the given domain to an ip address using DNS over HTTP3 on the given DNS resolver.
         :param message: the DNS message to resolve
         :param resolver: the DNS resolver to use
         :param timeout: the DNS request timeout
+        :param hostname: the hostname of the DNS resolver to use in SNI
         :return: The Dns response by the resolver
         """
         # TODO: check quic support through aioquic dependency
-        # TODO: SNI
-        return https(message, where=resolver.host, port=resolver.port, http_version=HTTPVersion.H3, timeout = timeout, verify=True)
+
+        q = message
+        where = resolver.host
+        url = f"https://{resolver.host}:{resolver.port}/dns-query"
+
+        q.id = 0
+        wire = q.to_wire()
+        manager = dns.quic.SyncQuicManager(
+            verify_mode=True, server_name=hostname, h3=True
+        )
+
+        with manager:
+            connection = manager.connect(where, resolver.port, None, 0)
+            (start, expiration) = _compute_times(timeout)
+            with connection.make_stream(timeout) as stream:
+                stream.send_h3(url, wire, True)
+                wire = stream.receive(_remaining(expiration))
+                _check_status(stream.headers(), where, wire)
+            finish = time.time()
+
+        r = dns.message.from_wire(
+            wire,
+            keyring=q.keyring,
+            request_mac=q.request_mac,
+            one_rr_per_rrset=False,
+            ignore_trailing=False,
+        )
+        r.time = max(finish - start, 0.0)
+        if not q.is_response(r):
+            raise BadResponse
+        return r
 
     @staticmethod
     @fix_transaction_id
@@ -111,7 +206,7 @@ class DomainResolver:
         :return: The Dns response by the resolver
         """
         # TODO: check quic support through aioquic dependency
-        return quic(message, where=resolver.host, port=resolver.port, timeout = timeout, server_hostname=hostname, hostname=hostname)
+        return quic(message, where=resolver.host, port=resolver.port, timeout = timeout, server_hostname=hostname, hostname=hostname, verify=True)
 
     @staticmethod
     def resolve_udp_static(message: Message, resolver: NetworkAddress, timeout: int) -> Message:
@@ -198,9 +293,9 @@ class DomainResolver:
         elif mode == DnsProxyMode.DOT:
             return DomainResolver.resolve_dot_static(message, resolver=resolver, timeout=timeout, hostname=hostname)
         elif mode == DnsProxyMode.DOH:
-            return DomainResolver.resolve_doh_static(message, resolver=resolver, timeout=timeout)
+            return DomainResolver.resolve_doh_static(message, resolver=resolver, timeout=timeout, hostname=hostname)
         elif mode == DnsProxyMode.DOH3:
-            return DomainResolver.resolve_doh3_static(message, resolver=resolver, timeout=timeout)
+            return DomainResolver.resolve_doh3_static(message, resolver=resolver, timeout=timeout, hostname=hostname)
         elif mode == DnsProxyMode.DOQ:
             return DomainResolver.resolve_doq_static(message, resolver=resolver, timeout=timeout, hostname=hostname)
         elif mode == DnsProxyMode.UDP:
