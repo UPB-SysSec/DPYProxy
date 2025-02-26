@@ -25,7 +25,7 @@ class DnsModeDeterminator:
         _ret = []
         for resolver in resolvers:
             address = NetworkAddress(resolver[2], resolver[3])
-            _ret += [DnsResolver(resolver[1], address, resolver[0], resolver[4], 0)]
+            _ret += [DnsResolver(resolver[1], address, resolver[0], resolver[4], 0, 0)]
         return _ret
 
     @staticmethod
@@ -164,27 +164,30 @@ class DnsModeDeterminator:
         self.censored_request = make_query(censored_domain, "A")
         self.resolvers: list[DnsResolver] = DnsModeDeterminator.generate_resolvers()
 
-    def generate_working_resolver(self, mode: DnsProxyMode = None, retries: int = 5):
+    def generate_working_resolver(self, mode: DnsProxyMode = None, min_retries: int = 3, max_retries: int = 20):
         """
         Generator that yields all working DnsResolvers.
         :param mode: Restricts resolver generation to the specified mode.
-        :param retries: Number of retries to determine success by majority voting
+        :param min_retries: Number of minimum retries to determine success.
+        :param max_retries: Number of maximum retries to determine success.
         """
         for _mode in [DnsProxyMode.DOT, DnsProxyMode.DOH, DnsProxyMode.DOH3, DnsProxyMode.DOQ]:
             if mode is None or mode == _mode:
-                yield from self.generate_resolvers_supporting_mode(mode=_mode, validate_ip=False, retries = retries)
+                yield from self.generate_resolvers_supporting_mode(mode=_mode, validate_ip=False, min_retries=min_retries, max_retries=max_retries)
         for _mode in [DnsProxyMode.UDP, DnsProxyMode.TCP, DnsProxyMode.TCP_FRAG, DnsProxyMode.LAST_RESPONSE]:
             if mode is None or mode == _mode:
-                yield from self.generate_resolvers_supporting_mode(mode=_mode, validate_ip=True, retries = retries)
+                yield from self.generate_resolvers_supporting_mode(mode=_mode, validate_ip=True, min_retries=min_retries, max_retries=max_retries)
 
 
-    def generate_resolvers_supporting_mode(self, mode: DnsProxyMode, validate_ip: bool, retries: int = 5):
+    def generate_resolvers_supporting_mode(self, mode: DnsProxyMode, validate_ip: bool, min_retries: int = 3, max_retries: int = 20):
         """
         Generator function that determines all reachable DNS resolvers for the specified mode. If validate_ip is True, the DNS resolver must respond with a pre-defined IP address.
         """
         for resolver in filter(lambda _resolver: _resolver.mode == mode, self.resolvers):
             logging.debug(f"Trying to resolve {resolver.name} for mode {resolver.mode}")
-            for i in range(retries):
+            success = False
+            for i in range(max_retries):
+                resolver.tries += 1
                 try:
                     answer = DomainResolver.resolve_static(mode=mode, message=self.censored_request, resolver=resolver.address, timeout=self.timeout, hostname=resolver.hostname)
                 except Exception as e:
@@ -194,12 +197,18 @@ class DnsModeDeterminator:
                         if self.assert_correct_ip(answer):
                             logging.debug(f"Successfully resolved to {resolver.name} for mode {resolver.mode}")
                             resolver.successes += 1
+                            if i+1 >= min_retries and resolver.successes / (i+1) >= 2/3:
+                                success = True
+                                break
                         else:
-                            print(f"Could not resolve to {resolver.name} for mode {resolver.mode}")
+                            logging.debug(f"Could not resolve to {resolver.name} for mode {resolver.mode}")
                     else:
                         logging.debug(f"Successfully resolved to {resolver.name} for mode {resolver.mode}")
                         resolver.successes += 1
-            if resolver.successes > retries / 2:
+                        if i + 1 >= min_retries and resolver.successes / (i + 1) >= 2/3:
+                            success = True
+                            break
+            if success:
                 yield resolver
 
     def assert_correct_ip(self, answer: dns.message.Message) -> bool:

@@ -11,6 +11,7 @@ class DnsResolver:
     mode: DnsProxyMode
     hostname: str
     successes: int
+    tries: int
 
     def __str__(self):
-        return f"{self.name}({self.address} - {self.mode}) | {self.successes} Successes"
+        return f"{self.name}({self.address} - {self.mode}) | ({self.successes}/{self.tries}) Successes"
