@@ -31,8 +31,8 @@ def main():
     _time = time.time()
 
     # TODO: Remove / Add SNI based on flag
-    for mode in [x for x in _det.generate_working_resolver(retries=RETRIES)]:
-        print(mode)
+    for resolver in [x for x in _det.generate_working_resolver(retries=RETRIES)]:
+        print(resolver)
 
     print(f"Time taken: {format_time(time.time() - _time)}")
 

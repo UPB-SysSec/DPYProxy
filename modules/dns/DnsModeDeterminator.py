@@ -25,7 +25,7 @@ class DnsModeDeterminator:
         _ret = []
         for resolver in resolvers:
             address = NetworkAddress(resolver[2], resolver[3])
-            _ret += [DnsResolver(resolver[1], address, resolver[0], resolver[4])]
+            _ret += [DnsResolver(resolver[1], address, resolver[0], resolver[4], 0)]
         return _ret
 
     @staticmethod
@@ -184,7 +184,6 @@ class DnsModeDeterminator:
         """
         for resolver in filter(lambda _resolver: _resolver.mode == mode, self.resolvers):
             logging.debug(f"Trying to resolve {resolver.name} for mode {resolver.mode}")
-            working_count = 0
             for i in range(retries):
                 try:
                     answer = DomainResolver.resolve_static(mode=mode, message=self.censored_request, resolver=resolver.address, timeout=self.timeout, hostname=resolver.hostname)
@@ -194,13 +193,13 @@ class DnsModeDeterminator:
                     if validate_ip:
                         if self.assert_correct_ip(answer):
                             logging.debug(f"Successfully resolved to {resolver.name} for mode {resolver.mode}")
-                            working_count += 1
+                            resolver.successes += 1
                         else:
                             print(f"Could not resolve to {resolver.name} for mode {resolver.mode}")
                     else:
                         logging.debug(f"Successfully resolved to {resolver.name} for mode {resolver.mode}")
-                        working_count += 1
-            if working_count > retries / 2:
+                        resolver.successes += 1
+            if resolver.successes > retries / 2:
                 yield resolver
 
     def assert_correct_ip(self, answer: dns.message.Message) -> bool:
