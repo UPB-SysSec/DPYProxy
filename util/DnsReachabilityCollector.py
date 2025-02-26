@@ -30,6 +30,7 @@ def main():
     print("Generating working resolvers... might take a while!")
     _time = time.time()
 
+    # TODO: Remove / Add SNI based on flag
     for mode in [x for x in _det.generate_working_resolver(retries=RETRIES)]:
         print(mode)
 
