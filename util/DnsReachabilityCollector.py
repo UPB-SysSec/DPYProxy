@@ -12,6 +12,7 @@ TIMEOUT = 5
 CENSORED_DOMAIN = "wikipedia.org"
 MIN_RETRIES = 3
 MAX_RETRIES = 20
+ADD_SNI = False
 # wikipedia ranges https://wikitech.wikimedia.org/wiki/IP_and_AS_allocations
 
 WIKIMEDIA_RANGES = [
@@ -32,7 +33,7 @@ def main():
     _time = time.time()
 
     # TODO: Remove / Add SNI based on flag
-    for resolver in [x for x in _det.generate_working_resolver(min_retries=MIN_RETRIES, max_retries=MAX_RETRIES)]:
+    for resolver in [x for x in _det.generate_working_resolver(min_retries=MIN_RETRIES, max_retries=MAX_RETRIES, add_sni=ADD_SNI)]:
         print(resolver)
 
     print(f"Time taken: {format_time(time.time() - _time)}")

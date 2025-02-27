@@ -164,22 +164,33 @@ class DnsModeDeterminator:
         self.censored_request = make_query(censored_domain, "A")
         self.resolvers: list[DnsResolver] = DnsModeDeterminator.generate_resolvers()
 
-    def generate_working_resolver(self, mode: DnsProxyMode = None, min_retries: int = 3, max_retries: int = 20):
+    def generate_working_resolver(self, mode: DnsProxyMode = None, min_retries: int = 3, max_retries: int = 20, add_sni: bool = True):
         """
         Generator that yields all working DnsResolvers.
         :param mode: Restricts resolver generation to the specified mode.
         :param min_retries: Number of minimum retries to determine success.
         :param max_retries: Number of maximum retries to determine success.
+        :param add_sni: Whether to include an SNI extension.
         """
         for _mode in [DnsProxyMode.DOT, DnsProxyMode.DOH, DnsProxyMode.DOH3, DnsProxyMode.DOQ]:
             if mode is None or mode == _mode:
-                yield from self.generate_resolvers_supporting_mode(mode=_mode, validate_ip=False, min_retries=min_retries, max_retries=max_retries)
+                if add_sni:
+                    yield from self.generate_resolvers_supporting_mode(mode=_mode, validate_ip=False,
+                                                                       min_retries=min_retries, max_retries=max_retries,
+                                                                       add_sni=add_sni)
+                else:
+                    yield from self.generate_resolvers_supporting_mode(mode=_mode, validate_ip=True,
+                                                                       min_retries=min_retries, max_retries=max_retries,
+                                                                       add_sni=add_sni)
+
         for _mode in [DnsProxyMode.UDP, DnsProxyMode.TCP, DnsProxyMode.TCP_FRAG, DnsProxyMode.LAST_RESPONSE]:
             if mode is None or mode == _mode:
-                yield from self.generate_resolvers_supporting_mode(mode=_mode, validate_ip=True, min_retries=min_retries, max_retries=max_retries)
+                yield from self.generate_resolvers_supporting_mode(mode=_mode, validate_ip=True,
+                                                                   min_retries=min_retries, max_retries=max_retries,
+                                                                   add_sni=add_sni)
 
 
-    def generate_resolvers_supporting_mode(self, mode: DnsProxyMode, validate_ip: bool, min_retries: int = 3, max_retries: int = 20):
+    def generate_resolvers_supporting_mode(self, mode: DnsProxyMode, validate_ip: bool, min_retries: int = 3, max_retries: int = 20, add_sni: bool = True):
         """
         Generator function that determines all reachable DNS resolvers for the specified mode. If validate_ip is True, the DNS resolver must respond with a pre-defined IP address.
         """
@@ -189,7 +200,7 @@ class DnsModeDeterminator:
             for i in range(max_retries):
                 resolver.tries += 1
                 try:
-                    answer = DomainResolver.resolve_static(mode=mode, message=self.censored_request, resolver=resolver.address, timeout=self.timeout, hostname=resolver.hostname)
+                    answer = DomainResolver.resolve_static(mode=mode, message=self.censored_request, resolver=resolver.address, timeout=self.timeout, hostname=resolver.hostname, add_sni=add_sni)
                 except Exception as e:
                     logging.debug(f"Could not resolve to {resolver.name} for mode {resolver.mode} with exception {e}")
                 else:
