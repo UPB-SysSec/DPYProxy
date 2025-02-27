@@ -43,30 +43,34 @@ class DnsModeDeterminator:
         return _ret
 
     @staticmethod
-    def generate_resolvers() -> list[DnsResolver]:
+    def generate_resolvers(restrict_advertised: bool = True) -> list[DnsResolver]:
         """
         Generates a list of DnsResolver objects based on the statically defined addresses below.
         """
         _res = []
 
-        # append RESOLVERS_SUPPORT_ALL
-        _res += DnsModeDeterminator.parse_default_resolvers(DnsModeDeterminator.RESOLVERS_SUPPORT_ALL,
-                                                            [mode for mode in DnsProxyMode if mode != DnsProxyMode.AUTO])
+        if restrict_advertised:
+            # append RESOLVERS_SUPPORT_ALL
+            _res += DnsModeDeterminator.parse_default_resolvers(DnsModeDeterminator.RESOLVERS_SUPPORT_ALL,
+                                                                [mode for mode in DnsProxyMode if mode != DnsProxyMode.AUTO])
 
-        # append RESOLVERS_SUPPORT_ALL_EXCEPT_DOQ
-        _res += DnsModeDeterminator.parse_default_resolvers(DnsModeDeterminator.RESOLVERS_SUPPORT_ALL_EXCEPT_DOQ,
-                                                            [mode for mode in DnsProxyMode if mode != DnsProxyMode.DOQ and mode != DnsProxyMode.AUTO])
+            # append RESOLVERS_SUPPORT_ALL_EXCEPT_DOQ
+            _res += DnsModeDeterminator.parse_default_resolvers(DnsModeDeterminator.RESOLVERS_SUPPORT_ALL_EXCEPT_DOQ,
+                                                                [mode for mode in DnsProxyMode if mode != DnsProxyMode.DOQ and mode != DnsProxyMode.AUTO])
 
-        # append RESOLVERS_SUPPORT_ENCRYPTED_EXCEPT_DOQ
-        _res += DnsModeDeterminator.parse_default_resolvers(DnsModeDeterminator.RESOLVERS_SUPPORT_ENCRYPTED_EXCEPT_DOQ,
-                                                            [DnsProxyMode.DOT, DnsProxyMode.DOH, DnsProxyMode.DOH3])
+            # append RESOLVERS_SUPPORT_ENCRYPTED_EXCEPT_DOQ
+            _res += DnsModeDeterminator.parse_default_resolvers(DnsModeDeterminator.RESOLVERS_SUPPORT_ENCRYPTED_EXCEPT_DOQ,
+                                                                [DnsProxyMode.DOT, DnsProxyMode.DOH, DnsProxyMode.DOH3])
 
-        # append RESOLVERS_SUPPORT_ONLY_UNENCRYPTED
-        _res += DnsModeDeterminator.parse_default_resolvers(DnsModeDeterminator.RESOLVERS_SUPPORT_ONLY_UNENCRYPTED,
-                                                            [DnsProxyMode.UDP,
-                                                             DnsProxyMode.TCP,
-                                                             DnsProxyMode.TCP_FRAG,
-                                                             DnsProxyMode.LAST_RESPONSE])
+            # append RESOLVERS_SUPPORT_ONLY_UNENCRYPTED
+            _res += DnsModeDeterminator.parse_default_resolvers(DnsModeDeterminator.RESOLVERS_SUPPORT_ONLY_UNENCRYPTED,
+                                                                [DnsProxyMode.UDP,
+                                                                 DnsProxyMode.TCP,
+                                                                 DnsProxyMode.TCP_FRAG,
+                                                                 DnsProxyMode.LAST_RESPONSE])
+        else:
+            _res += DnsModeDeterminator.parse_default_resolvers([x for x in DnsResolvers],
+                                                                [mode for mode in DnsProxyMode if mode != DnsProxyMode.AUTO])
         return _res
 
     # TODO: refine these lists based on what servers actually support
@@ -143,7 +147,7 @@ class DnsModeDeterminator:
 
     ])
 
-    def __init__(self, timeout: int, censored_domain: str, censored_domain_ip_ranges: list[str]):
+    def __init__(self, timeout: int, censored_domain: str, censored_domain_ip_ranges: list[str], restrict_advertised: bool = True):
         """
         :param timeout: timeout for DNS requests
         :param censored_domain: censored domain
@@ -162,7 +166,7 @@ class DnsModeDeterminator:
                 logging.error(f"Could not parse {ip_range} as a valid ip range!")
                 raise
         self.censored_request = make_query(censored_domain, "A")
-        self.resolvers: list[DnsResolver] = DnsModeDeterminator.generate_resolvers()
+        self.resolvers: list[DnsResolver] = DnsModeDeterminator.generate_resolvers(restrict_advertised)
 
     def generate_working_resolver(self, mode: DnsProxyMode = None, min_retries: int = 3, max_retries: int = 20, add_sni: bool = True):
         """
