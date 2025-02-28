@@ -232,12 +232,16 @@ class DnsModeDeterminator:
         :param answer: The DNS response to check.
         """
         # extract requires record type and class
-        _name = answer.question[0].name
-        _rdclass = answer.question[0].rdclass
-        _rdtype = answer.question[0].rdtype
         resolved_ips = []
+        _name = ""
+        _rdclass = ""
+        _rdtype = ""
 
         try:
+            _name = answer.question[0].name
+            _rdclass = answer.question[0].rdclass
+            _rdtype = answer.question[0].rdtype
+
             for record in answer.find_rrset(answer.answer, _name, _rdclass, _rdtype):
                 try:
                     ip = record.address
