@@ -255,7 +255,10 @@ class DnsModeDeterminator:
                         if ip_address(ip) in ip_range:
                             return True
         except Exception as e:
-            logging.error(f"Could not extract IP from DNS response with exception {e}:\n{_name}, {_rdclass}, {_rdtype}, {answer.answer}")
+            if answer is not None:
+                logging.error(f"Could not extract IP from DNS response with exception {e}:\n{_name}, {_rdclass}, {_rdtype}, {answer.answer}")
+            else:
+                logging.error(f"Could not extract IP from DNS response with exception {e}:\n{_name}, {_rdclass}, {_rdtype}, None")
 
         logging.debug(f"None of the resolved IP addresses {resolved_ips} in specified IP ranges {self.censored_domain_ip_ranges}.")
         return False
