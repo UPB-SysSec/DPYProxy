@@ -237,17 +237,21 @@ class DnsModeDeterminator:
         _rdtype = answer.question[0].rdtype
         resolved_ips = []
 
-        for record in answer.find_rrset(answer.answer, _name, _rdclass, _rdtype):
-            try:
-                ip = record.address
-                resolved_ips += [ip]
-            except Exception as e:
-                logging.error(f"Could not extract IP from DNS response with exception {e}:\n{record}")
-                continue
-            else:
-                # check if IP lies in range
-                for ip_range in self.censored_domain_ip_ranges:
-                    if ip_address(ip) in ip_range:
-                        return True
+        try:
+            for record in answer.find_rrset(answer.answer, _name, _rdclass, _rdtype):
+                try:
+                    ip = record.address
+                    resolved_ips += [ip]
+                except Exception as e:
+                    logging.error(f"Could not extract IP from DNS response with exception {e}:\n{record}")
+                    continue
+                else:
+                    # check if IP lies in range
+                    for ip_range in self.censored_domain_ip_ranges:
+                        if ip_address(ip) in ip_range:
+                            return True
+        except Exception as e:
+            logging.error(f"Could not extract IP from DNS response with exception {e}:\n{_name}, {_rdclass}, {_rdtype}, {answer.answer}")
+
         logging.debug(f"None of the resolved IP addresses {resolved_ips} in specified IP ranges {self.censored_domain_ip_ranges}.")
         return False
