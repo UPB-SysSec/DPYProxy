@@ -9,9 +9,9 @@ class DnsResolvers(Enum):
 
     # Adguard https://adguard-dns.io/en/public-dns.html
     ADGUARD_1 = ("94.140.14.14", "dns.adguard-dns.com")
-    ADGUARD_2 = ("94.140.14.15", "dns.adguard-dns.com")
+    ADGUARD_2 = ("94.140.15.15", "dns.adguard-dns.com")
     ADGUARD_FAMILY_1 = ("94.140.14.15", "family.adguard-dns.com")
-    ADGUARD_FAMILY_2 = ("94.140.14.16", "family.adguard-dns.com")
+    ADGUARD_FAMILY_2 = ("94.140.15.16", "family.adguard-dns.com")
     ADGUARD_UNFILTERED_1 = ("94.140.14.140", "unfiltered.adguard-dns.com")
     ADGUARD_UNFILTERED_2 = ("94.140.14.141", "unfiltered.adguard-dns.com")
 
