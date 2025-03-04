@@ -18,8 +18,8 @@ class DnsResolvers(Enum):
     # CleanBrowsing https://cleanbrowsing.org/filters
     CLEAN_BROWSING_FAMILY_1 = ("185.228.168.168", "family-filter-dns.cleanbrowsing.org")
     CLEAN_BROWSING_FAMILY_2 = ("185.228.169.168", "family-filter-dns.cleanbrowsing.org")
-    CLEAN_BROWSING_UNFILTERED_1 = ("185.228.168.10", "adult-filter-dns.cleanbrowsing.org")
-    CLEAN_BROWSING_UNFILTERED_2 = ("185.228.169.11", "adult-filter-dns.cleanbrowsing.org")
+    CLEAN_BROWSING_ADULT_1 = ("185.228.168.10", "adult-filter-dns.cleanbrowsing.org")
+    CLEAN_BROWSING_ADULT_2 = ("185.228.169.11", "adult-filter-dns.cleanbrowsing.org")
     CLEAN_BROWSING_SECURITY_1 = ("185.228.168.9", "security-filter-dns.cleanbrowsing.org")
     CLEAN_BROWSING_SECURITY_2 = ("185.228.169.9", "security-filter-dns.cleanbrowsing.org")
 
@@ -92,8 +92,6 @@ class DnsResolvers(Enum):
         """
         return self in [DnsResolvers.ADGUARD_UNFILTERED_1,
                         DnsResolvers.ADGUARD_UNFILTERED_2,
-                        DnsResolvers.CLEAN_BROWSING_UNFILTERED_1,
-                        DnsResolvers.CLEAN_BROWSING_UNFILTERED_2,
                         DnsResolvers.CLOUDFLARE_1,
                         DnsResolvers.CLOUDFLARE_2,
                         DnsResolvers.GOOGLE_1,

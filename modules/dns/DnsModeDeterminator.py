@@ -86,8 +86,8 @@ class DnsModeDeterminator:
     # resolvers that support UDP/TCP/DoT/DoH/DoH3 but no DoQ
     RESOLVERS_SUPPORT_ALL_EXCEPT_DOQ: list[DnsResolvers] = [DnsResolvers.CLEAN_BROWSING_FAMILY_1,
                                                             DnsResolvers.CLEAN_BROWSING_FAMILY_2,
-                                                            DnsResolvers.CLEAN_BROWSING_UNFILTERED_1,
-                                                            DnsResolvers.CLEAN_BROWSING_UNFILTERED_2,
+                                                            DnsResolvers.CLEAN_BROWSING_ADULT_1,
+                                                            DnsResolvers.CLEAN_BROWSING_ADULT_2,
                                                             DnsResolvers.CLEAN_BROWSING_SECURITY_1,
                                                             DnsResolvers.CLEAN_BROWSING_SECURITY_2,
                                                             DnsResolvers.CLOUDFLARE_1,

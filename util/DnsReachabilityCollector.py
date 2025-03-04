@@ -12,7 +12,7 @@ TIMEOUT = 5
 CENSORED_DOMAIN = "wikipedia.org"
 MIN_RETRIES = 3
 MAX_RETRIES = 20
-ADD_SNI = True
+ADD_SNI = False
 RESTRICT_ADVERTISED = False
 # wikipedia ranges https://wikitech.wikimedia.org/wiki/IP_and_AS_allocations
 

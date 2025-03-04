@@ -72,7 +72,7 @@ class DomainResolver:
         if add_sni:
             return tls(message, where=resolver.host, port=resolver.port, timeout=timeout, server_hostname=hostname, verify=True)
         else:
-            return tls(message, where=resolver.host, port=resolver.port, timeout=timeout)
+            return tls(message, where=resolver.host, port=resolver.port, timeout=timeout, verify=False)
 
     @staticmethod
     @fix_transaction_id
@@ -142,6 +142,7 @@ class DomainResolver:
             if response.status_code < 200 or response.status_code > 299:
                 raise ValueError(
                     f"{resolver.host} responded with status code {response.status_code}"
+                    f"\nResponse headers: {response.headers}"
                     f"\nResponse body: {response.content}"
                 )
 
@@ -157,7 +158,7 @@ class DomainResolver:
                 raise BadResponse
             return r
         else:
-            return https(message, where=resolver.host, port=resolver.port, http_version=HTTPVersion.H2, timeout=timeout)
+            return https(message, where=resolver.host, port=resolver.port, http_version=HTTPVersion.H2, timeout=timeout, verify=False)
 
     @staticmethod
     @fix_transaction_id
@@ -205,7 +206,7 @@ class DomainResolver:
                 raise BadResponse
             return r
         else:
-            return https(message, where=resolver.host, port=resolver.port, http_version=HTTPVersion.H3, timeout=timeout)
+            return https(message, where=resolver.host, port=resolver.port, http_version=HTTPVersion.H3, timeout=timeout, verify=False)
 
     @staticmethod
     @fix_transaction_id
@@ -221,9 +222,9 @@ class DomainResolver:
         """
         # TODO: check quic support through aioquic dependency
         if add_sni:
-            return quic(message, where=resolver.host, port=resolver.port, timeout = timeout, server_hostname=hostname, hostname=hostname, verify=True)
+            return quic(message, where=resolver.host, port=resolver.port, timeout=timeout, server_hostname=hostname, hostname=hostname, verify=True)
         else:
-            return quic(message, where=resolver.host, port=resolver.port, timeout=timeout)
+            return quic(message, where=resolver.host, port=resolver.port, timeout=timeout, verify=False)
 
     @staticmethod
     def resolve_udp_static(message: Message, resolver: NetworkAddress, timeout: int) -> Message:
