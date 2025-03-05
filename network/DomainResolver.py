@@ -76,7 +76,7 @@ class DomainResolver:
 
     @staticmethod
     @fix_transaction_id
-    def resolve_doh_static(message: Message, resolver: NetworkAddress, timeout: int, hostname: str, add_sni:bool = True) -> Message:
+    def resolve_doh_static(message: Message, resolver: NetworkAddress, timeout: int, hostname: str, add_sni:bool = True, path:str = "/dns-query") -> Message:
         """
         Resolves the given domain to an ip address using DNS over HTTPS on the given DNS resolver.
         :param message: the DNS message to resolve
@@ -84,12 +84,13 @@ class DomainResolver:
         :param timeout: the DNS request timeout
         :param hostname: the hostname that TLS should use in SNI
         :param add_sni: whether to add SNI
+        :param path: the path used in the HTTP URL
         :return: The Dns response by the resolver
         """
         # TODO: check http support through httpx dependency
 
         if add_sni:
-            url=f"https://{resolver.host}:{resolver.port}/dns-query"
+            url=f"https://{resolver.host}:{resolver.port}{path}"
 
             (_, _, the_source) = _destination_and_source(
                 resolver.host, resolver.port, None, 0, False
@@ -158,11 +159,11 @@ class DomainResolver:
                 raise BadResponse
             return r
         else:
-            return https(message, where=resolver.host, port=resolver.port, http_version=HTTPVersion.H2, timeout=timeout, verify=False)
+            return https(message, where=resolver.host, port=resolver.port, http_version=HTTPVersion.H2, timeout=timeout, verify=False, path=path)
 
     @staticmethod
     @fix_transaction_id
-    def resolve_doh3_static(message: Message, resolver: NetworkAddress, timeout: int, hostname:str, add_sni:bool = True) -> Message:
+    def resolve_doh3_static(message: Message, resolver: NetworkAddress, timeout: int, hostname:str, add_sni:bool = True, path:str = "/dns-query") -> Message:
         """
         Resolves the given domain to an ip address using DNS over HTTP3 on the given DNS resolver.
         :param message: the DNS message to resolve
@@ -170,6 +171,7 @@ class DomainResolver:
         :param timeout: the DNS request timeout
         :param hostname: the hostname of the DNS resolver to use in SNI
         :param add_sni: whether to add SNI
+        :param path: the path used in the HTTP URL
         :return: The Dns response by the resolver
         """
         # TODO: check quic support through aioquic dependency
@@ -177,7 +179,7 @@ class DomainResolver:
         if add_sni:
             q = message
             where = resolver.host
-            url = f"https://{resolver.host}:{resolver.port}/dns-query"
+            url = f"https://{resolver.host}:{resolver.port}{path}"
 
             q.id = 0
             wire = q.to_wire()
@@ -206,7 +208,7 @@ class DomainResolver:
                 raise BadResponse
             return r
         else:
-            return https(message, where=resolver.host, port=resolver.port, http_version=HTTPVersion.H3, timeout=timeout, verify=False)
+            return https(message, where=resolver.host, port=resolver.port, http_version=HTTPVersion.H3, timeout=timeout, verify=False, path=path)
 
     @staticmethod
     @fix_transaction_id
@@ -296,7 +298,7 @@ class DomainResolver:
         return last_received
 
     @staticmethod
-    def resolve_static(mode: DnsProxyMode, message: Message, resolver: NetworkAddress, timeout: int, frag_size: int=DNS_TCP_FRAG_SIZE, hostname: str="", add_sni:bool = True) -> Message:
+    def resolve_static(mode: DnsProxyMode, message: Message, resolver: NetworkAddress, timeout: int, frag_size: int=DNS_TCP_FRAG_SIZE, hostname: str="", add_sni:bool = True, path:str = "/dns-query") -> Message:
         """
         Resolves the requested message based on the selected mode.
         :param mode: the DNS proxy mode to use. Must not be AUTO, will raise a DnsException
@@ -306,15 +308,16 @@ class DomainResolver:
         :param frag_size: size of the TCP segments used to fragment the DNS message if the mode is TCP_FRAG
         :param hostname: the hostname of the DNS resolver
         :param add_sni: whether to add SNI
+        :param path: the path used in the HTTP URL
         """
         if mode == DnsProxyMode.AUTO:
             raise DnsException("No resolution function for mode AUTO")
         elif mode == DnsProxyMode.DOT:
             return DomainResolver.resolve_dot_static(message, resolver=resolver, timeout=timeout, hostname=hostname, add_sni=add_sni)
         elif mode == DnsProxyMode.DOH:
-            return DomainResolver.resolve_doh_static(message, resolver=resolver, timeout=timeout, hostname=hostname, add_sni=add_sni)
+            return DomainResolver.resolve_doh_static(message, resolver=resolver, timeout=timeout, hostname=hostname, add_sni=add_sni, path=path)
         elif mode == DnsProxyMode.DOH3:
-            return DomainResolver.resolve_doh3_static(message, resolver=resolver, timeout=timeout, hostname=hostname, add_sni=add_sni)
+            return DomainResolver.resolve_doh3_static(message, resolver=resolver, timeout=timeout, hostname=hostname, add_sni=add_sni, path=path)
         elif mode == DnsProxyMode.DOQ:
             return DomainResolver.resolve_doq_static(message, resolver=resolver, timeout=timeout, hostname=hostname, add_sni=add_sni)
         elif mode == DnsProxyMode.UDP:
