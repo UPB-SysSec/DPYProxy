@@ -1,13 +1,12 @@
 import socket
-import ssl
 import time
 
 import dns
 import httpx
 from dns.exception import Timeout
 from dns.message import Message
-from dns.query import tls, tcp, https, quic, udp, send_udp, receive_udp, HTTPVersion, _http3, _maybe_get_resolver, \
-    _destination_and_source, _HTTPTransport, BadResponse, _compute_times, _remaining, _check_status
+from dns.query import tls, tcp, quic, udp, send_udp, receive_udp, _destination_and_source, _HTTPTransport, BadResponse, \
+    _compute_times, _remaining, _check_status
 
 from enumerators.DnsProxyMode import DnsProxyMode
 from exception.DnsException import DnsException
@@ -89,77 +88,78 @@ class DomainResolver:
         """
         # TODO: check http support through httpx dependency
 
+        # Reused code from dnypython's https function below
+
+        url=f"https://{resolver.host}:{resolver.port}{path}"
+
+        (_, _, the_source) = _destination_and_source(
+            resolver.host, resolver.port, None, 0, False
+        )
+
+        extensions = {}
+        bootstrap_address = resolver.host
+        verify = add_sni
         if add_sni:
-            url=f"https://{resolver.host}:{resolver.port}{path}"
-
-            (_, _, the_source) = _destination_and_source(
-                resolver.host, resolver.port, None, 0, False
-            )
-
-            extensions = {}
-            bootstrap_address = resolver.host
             extensions["sni_hostname"] = hostname
-            q = message
+        q = message
 
-            wire = q.to_wire()
-            headers = {"accept": "application/dns-message"}
+        wire = q.to_wire()
+        headers = {"accept": "application/dns-message"}
 
-            if the_source is None:
-                local_address = None
-                local_port = 0
-            else:
-                local_address = the_source[0]
-                local_port = the_source[1]
-
-            transport = _HTTPTransport(
-                local_address=local_address,
-                http1=False,
-                http2=True,
-                verify=True,
-                local_port=local_port,
-                bootstrap_address=bootstrap_address,
-                resolver=resolver,
-                family=socket.AF_UNSPEC,
-            )
-
-            cm = httpx.Client(http1=False, http2=True, verify=True, transport=transport)
-
-            with cm as session:
-                headers.update(
-                    {
-                        "content-type": "application/dns-message",
-                        "content-length": str(len(wire)),
-                    }
-                )
-                response = session.post(
-                    url,
-                    headers=headers,
-                    content=wire,
-                    timeout=timeout,
-                    extensions=extensions,
-                )
-
-            # status code exception
-            if response.status_code < 200 or response.status_code > 299:
-                raise ValueError(
-                    f"{resolver.host} responded with status code {response.status_code}"
-                    f"\nResponse headers: {response.headers}"
-                    f"\nResponse body: {response.content}"
-                )
-
-            r = dns.message.from_wire(
-                response.content,
-                keyring=q.keyring,
-                request_mac=q.request_mac,
-                one_rr_per_rrset=False,
-                ignore_trailing=False,
-            )
-            r.time = response.elapsed.total_seconds()
-            if not q.is_response(r):
-                raise BadResponse
-            return r
+        if the_source is None:
+            local_address = None
+            local_port = 0
         else:
-            return https(message, where=resolver.host, port=resolver.port, http_version=HTTPVersion.H2, timeout=timeout, verify=False, path=path)
+            local_address = the_source[0]
+            local_port = the_source[1]
+
+        transport = _HTTPTransport(
+            local_address=local_address,
+            http1=False,
+            http2=True,
+            verify=verify,
+            local_port=local_port,
+            bootstrap_address=bootstrap_address,
+            resolver=resolver,
+            family=socket.AF_UNSPEC,
+        )
+
+        cm = httpx.Client(http1=False, http2=True, verify=verify, transport=transport)
+
+        with cm as session:
+            headers.update(
+                {
+                    "content-type": "application/dns-message",
+                    "content-length": str(len(wire)),
+                }
+            )
+            response = session.post(
+                url,
+                headers=headers,
+                content=wire,
+                timeout=timeout,
+                extensions=extensions,
+            )
+
+        # status code exception
+        if response.status_code < 200 or response.status_code > 299:
+            raise ValueError(
+                f"{resolver.host} responded with status code {response.status_code}"
+                f"\nResponse headers: {response.headers}"
+                f"\nResponse body: {response.content}"
+            )
+
+        r = dns.message.from_wire(
+            response.content,
+            keyring=q.keyring,
+            request_mac=q.request_mac,
+            one_rr_per_rrset=False,
+            ignore_trailing=False,
+        )
+        r.time = response.elapsed.total_seconds()
+        if not q.is_response(r):
+            raise BadResponse
+        return r
 
     @staticmethod
     @fix_transaction_id
@@ -176,39 +176,44 @@ class DomainResolver:
         """
         # TODO: check quic support through aioquic dependency
 
-        if add_sni:
-            q = message
-            where = resolver.host
-            url = f"https://{resolver.host}:{resolver.port}{path}"
+        # Reused code from dnypython's _http3 function below
 
-            q.id = 0
-            wire = q.to_wire()
+        q = message
+        where = resolver.host
+        url = f"https://{resolver.host}:{resolver.port}{path}"
+
+        q.id = 0
+        wire = q.to_wire()
+
+        if add_sni:
             manager = dns.quic.SyncQuicManager(
                 verify_mode=True, server_name=hostname, h3=True
             )
-
-            with manager:
-                connection = manager.connect(where, resolver.port, None, 0)
-                (start, expiration) = _compute_times(timeout)
-                with connection.make_stream(timeout) as stream:
-                    stream.send_h3(url, wire, True)
-                    wire = stream.receive(_remaining(expiration))
-                    _check_status(stream.headers(), where, wire)
-                finish = time.time()
-
-            r = dns.message.from_wire(
-                wire,
-                keyring=q.keyring,
-                request_mac=q.request_mac,
-                one_rr_per_rrset=False,
-                ignore_trailing=False,
-            )
-            r.time = max(finish - start, 0.0)
-            if not q.is_response(r):
-                raise BadResponse
-            return r
         else:
-            return https(message, where=resolver.host, port=resolver.port, http_version=HTTPVersion.H3, timeout=timeout, verify=False, path=path)
+            manager = dns.quic.SyncQuicManager(
+                verify_mode=False, server_name=None, h3=True
+            )
+
+        with manager:
+            connection = manager.connect(where, resolver.port, None, 0)
+            (start, expiration) = _compute_times(timeout)
+            with connection.make_stream(timeout) as stream:
+                stream.send_h3(url, wire, True)
+                wire = stream.receive(_remaining(expiration))
+                _check_status(stream.headers(), where, wire)
+            finish = time.time()
+
+        r = dns.message.from_wire(
+            wire,
+            keyring=q.keyring,
+            request_mac=q.request_mac,
+            one_rr_per_rrset=False,
+            ignore_trailing=False,
+        )
+        r.time = max(finish - start, 0.0)
+        if not q.is_response(r):
+            raise BadResponse
+        return r
 
     @staticmethod
     @fix_transaction_id
