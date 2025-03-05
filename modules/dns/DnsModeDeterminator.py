@@ -58,9 +58,18 @@ class DnsModeDeterminator:
             _res += DnsModeDeterminator.parse_default_resolvers(DnsModeDeterminator.RESOLVERS_SUPPORT_ALL_EXCEPT_DOQ,
                                                                 [mode for mode in DnsProxyMode if mode != DnsProxyMode.DOQ and mode != DnsProxyMode.AUTO])
 
+            # append RESOLVERS_SUPPORT_ALL_EXCEPT_DOH3_DOQ
+            _res += DnsModeDeterminator.parse_default_resolvers(DnsModeDeterminator.RESOLVERS_SUPPORT_ALL_EXCEPT_DOH3_DOQ,
+                                                                [mode for mode in DnsProxyMode if mode != DnsProxyMode.DOQ and mode != DnsProxyMode.AUTO
+                                                                 and mode != DnsProxyMode.DOH3])
+
+            # append RESOLVERS_SUPPORT_UDP_TCP_DOT
+            _res += DnsModeDeterminator.parse_default_resolvers(DnsModeDeterminator.RESOLVERS_SUPPORT_UDP_TCP_DOT,
+                                                                [DnsProxyMode.UDP, DnsProxyMode.LAST_RESPONSE, DnsProxyMode.TCP, DnsProxyMode.TCP_FRAG, DnsProxyMode.DOT])
+
             # append RESOLVERS_SUPPORT_ENCRYPTED_EXCEPT_DOQ
-            _res += DnsModeDeterminator.parse_default_resolvers(DnsModeDeterminator.RESOLVERS_SUPPORT_ENCRYPTED_EXCEPT_DOQ,
-                                                                [DnsProxyMode.DOT, DnsProxyMode.DOH, DnsProxyMode.DOH3])
+            _res += DnsModeDeterminator.parse_default_resolvers(DnsModeDeterminator.RESOLVERS_SUPPORT_ENCRYPTED_EXCEPT_DOH3_DOQ,
+                                                                [DnsProxyMode.DOT, DnsProxyMode.DOH])
 
             # append RESOLVERS_SUPPORT_ONLY_UNENCRYPTED
             _res += DnsModeDeterminator.parse_default_resolvers(DnsModeDeterminator.RESOLVERS_SUPPORT_ONLY_UNENCRYPTED,
@@ -73,8 +82,6 @@ class DnsModeDeterminator:
                                                                 [mode for mode in DnsProxyMode if mode != DnsProxyMode.AUTO])
         return _res
 
-    # TODO: refine these lists based on what servers actually support
-
     # resolvers that support UDP/TPC/DoT/DoH/DoH3/DoQ
     RESOLVERS_SUPPORT_ALL: list[DnsResolvers] = [DnsResolvers.ADGUARD_1,
                                                  DnsResolvers.ADGUARD_2,
@@ -84,20 +91,21 @@ class DnsModeDeterminator:
                                                  DnsResolvers.ADGUARD_FAMILY_2]
 
     # resolvers that support UDP/TCP/DoT/DoH/DoH3 but no DoQ
-    RESOLVERS_SUPPORT_ALL_EXCEPT_DOQ: list[DnsResolvers] = [DnsResolvers.CLEAN_BROWSING_FAMILY_1,
-                                                            DnsResolvers.CLEAN_BROWSING_FAMILY_2,
-                                                            DnsResolvers.CLEAN_BROWSING_ADULT_1,
-                                                            DnsResolvers.CLEAN_BROWSING_ADULT_2,
-                                                            DnsResolvers.CLEAN_BROWSING_SECURITY_1,
-                                                            DnsResolvers.CLEAN_BROWSING_SECURITY_2,
-                                                            DnsResolvers.CLOUDFLARE_1,
+    RESOLVERS_SUPPORT_ALL_EXCEPT_DOQ: list[DnsResolvers] = [DnsResolvers.CLOUDFLARE_1,
                                                             DnsResolvers.CLOUDFLARE_2,
                                                             DnsResolvers.CLOUDFLARE_SECURITY_1,
                                                             DnsResolvers.CLOUDFLARE_SECURITY_2,
                                                             DnsResolvers.CLOUDFLARE_FAMILY_1,
                                                             DnsResolvers.CLOUDFLARE_FAMILY_2,
                                                             DnsResolvers.GOOGLE_1,
-                                                            DnsResolvers.GOOGLE_2,
+                                                            DnsResolvers.GOOGLE_2]
+
+    # resolvers that support UDP/TCP/DoT/DoH but no DOH3 and DoQ
+    RESOLVERS_SUPPORT_ALL_EXCEPT_DOH3_DOQ: list[DnsResolvers] = [DnsResolvers.CLEAN_BROWSING_FAMILY_1,
+                                                            DnsResolvers.CLEAN_BROWSING_FAMILY_2,
+                                                            DnsResolvers.CLEAN_BROWSING_ADULT_1,
+                                                            DnsResolvers.CLEAN_BROWSING_SECURITY_1,
+                                                            DnsResolvers.CLEAN_BROWSING_SECURITY_2,
                                                             DnsResolvers.CISCO_1,
                                                             DnsResolvers.CISCO_2,
                                                             DnsResolvers.CISCO_FAMILY_1,
@@ -117,8 +125,11 @@ class DnsModeDeterminator:
                                                             DnsResolvers.YANDEX_FAMILY_1,
                                                             DnsResolvers.YANDEX_FAMILY_2]
 
-    # resolvers that support DoT/DoH/DoH3
-    RESOLVERS_SUPPORT_ENCRYPTED_EXCEPT_DOQ: list[DnsResolvers] = [DnsResolvers.WIKIMEDIA,
+    # resolvers that support UDP/TCP/DoT
+    RESOLVERS_SUPPORT_UDP_TCP_DOT: list [DnsResolvers] = [DnsResolvers.CLEAN_BROWSING_ADULT_2]
+
+    # resolvers that support DoT/DoH
+    RESOLVERS_SUPPORT_ENCRYPTED_EXCEPT_DOH3_DOQ: list[DnsResolvers] = [DnsResolvers.WIKIMEDIA,
                                                                   DnsResolvers.MULLVAD,
                                                                   DnsResolvers.MULLVAD_ADBLOCK,
                                                                   DnsResolvers.MULLVAD_BASE,
