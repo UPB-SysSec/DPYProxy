@@ -158,21 +158,24 @@ class DnsModeDeterminator:
 
     ])
 
-    def __init__(self, timeout: int, censored_domain: str, censored_domain_ip_ranges: list[str], restrict_advertised: bool = True):
+    def __init__(self, timeout: int, censored_domain: str, compare_ip_ranges: list[str], block_page_ips: bool = False, restrict_advertised: bool = True):
         """
         :param timeout: timeout for DNS requests
         :param censored_domain: censored domain
-        :param censored_domain_ip_ranges: ip ranges of the censored domain. An IP returned by a DNS resolver must lie
+        :param compare_ip_ranges: ip ranges to compare against
+        :param block_page_ips: whether the ip ranges are block pages ips (avoid) or not (match)
+        :param restrict_advertised: whether to restrict resolver to what they actually support
         in one of these ranges to be deemed correct
         """
 
         self.timeout = timeout
         self.censored_domain = censored_domain
+        self.block_page_ips = block_page_ips
 
-        self.censored_domain_ip_ranges = []
-        for ip_range in censored_domain_ip_ranges:
+        self.compare_ip_ranges = []
+        for ip_range in compare_ip_ranges:
             try:
-                self.censored_domain_ip_ranges.append(ip_network(ip_range))
+                self.compare_ip_ranges.append(ip_network(ip_range))
             except:
                 logging.error(f"Could not parse {ip_range} as a valid ip range!")
                 raise
@@ -263,14 +266,14 @@ class DnsModeDeterminator:
                     continue
                 else:
                     # check if IP lies in range
-                    for ip_range in self.censored_domain_ip_ranges:
+                    for ip_range in self.compare_ip_ranges:
                         if ip_address(ip) in ip_range:
-                            return True
+                            return not self.block_page_ips
         except Exception as e:
             if answer is not None:
                 logging.error(f"Could not extract IP from DNS response with exception {e}:\n{_name}, {_rdclass}, {_rdtype}, {answer.answer}")
             else:
                 logging.error(f"Could not extract IP from DNS response with exception {e}:\n{_name}, {_rdclass}, {_rdtype}, None")
 
-        logging.debug(f"None of the resolved IP addresses {resolved_ips} in specified IP ranges {self.censored_domain_ip_ranges}.")
-        return False
+        logging.debug(f"None of the resolved IP addresses {resolved_ips} in specified IP ranges {self.compare_ip_ranges}.")
+        return self.block_page_ips
