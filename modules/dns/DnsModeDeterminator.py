@@ -54,6 +54,10 @@ class DnsModeDeterminator:
             _res += DnsModeDeterminator.parse_default_resolvers(DnsModeDeterminator.RESOLVERS_SUPPORT_ALL,
                                                                 [mode for mode in DnsProxyMode if mode != DnsProxyMode.AUTO])
 
+            #append RESOLVERS_SUPPORT_ALL_ENCRYPTED
+            _res += DnsModeDeterminator.parse_default_resolvers(DnsModeDeterminator.RESOLVERS_SUPPORT_ALL_ENCRYPTED,
+                                                                [DnsProxyMode.DOT, DnsProxyMode.DOH, DnsProxyMode.DOH3, DnsProxyMode.DOQ])
+
             # append RESOLVERS_SUPPORT_ALL_EXCEPT_DOQ
             _res += DnsModeDeterminator.parse_default_resolvers(DnsModeDeterminator.RESOLVERS_SUPPORT_ALL_EXCEPT_DOQ,
                                                                 [mode for mode in DnsProxyMode if mode != DnsProxyMode.DOQ and mode != DnsProxyMode.AUTO])
@@ -89,6 +93,10 @@ class DnsModeDeterminator:
                                                  DnsResolvers.ADGUARD_UNFILTERED_2,
                                                  DnsResolvers.ADGUARD_FAMILY_1,
                                                  DnsResolvers.ADGUARD_FAMILY_2]
+
+    # resolver that support DoQ/DoH3/DoH/DoT
+    RESOLVERS_SUPPORT_ALL_ENCRYPTED: list[DnsResolvers] = [DnsResolvers.NEXTDNS_1,
+                                                           DnsResolvers.NEXTDNS_2]
 
     # resolvers that support UDP/TCP/DoT/DoH/DoH3 but no DoQ
     RESOLVERS_SUPPORT_ALL_EXCEPT_DOQ: list[DnsResolvers] = [DnsResolvers.CLOUDFLARE_1,

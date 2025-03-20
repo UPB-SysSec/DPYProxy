@@ -58,6 +58,7 @@ class DnsResolvers(Enum):
     CISCO_FAMILY_2 = ("208.67.220.123", "familyshield.opendns.com", "/dns-query")
     CISCO_SANDBOX_1 = ("208.67.222.2", "sandbox.opendns.com", "/dns-query")
     CISCO_SANDBOX_2 = ("208.67.220.2", "sandbox.opendns.com", "/dns-query")
+    CISCO_CHROMIUM = ("146.112.62.105", "www.opendns.com", "/dns-query")
 
     # Quad 9 https://www.quad9.net/support/faq/
     QUAD_9_1 = ("9.9.9.9", "dns.quad9.net", "/dns-query")
@@ -77,15 +78,6 @@ class DnsResolvers(Enum):
     YANDEX_SAFE_2 = ("77.88.8.2", "safe.dot.dns.yandex.net", "/dns-query")
     YANDEX_FAMILY_1 = ("77.88.8.7", "family.dot.dns.yandex.net", "/dns-query")
     YANDEX_FAMILY_2 = ("77.88.8.3", "family.dot.dns.yandex.net", "/dns-query")
-
-    # OpenDNS https://www.opendns.com/
-    OPENDNS_1 = ("208.67.222.222", "dns.opendns.com", "/dns-query")
-    OPENDNS_2 = ("208.67.220.220", "dns.opendns.com", "/dns-query")
-    OPENDNS_FAMILY_1 = ("208.67.222.123", "familyshield.opendns.com", "/dns-query")
-    OPENDNS_FAMILY_2 = ("208.67.220.123", "familyshield.opendns.com", "/dns-query")
-    OPENDNS_SANDBOX_1 = ("208.67.220.2", "sandbox.opendns.com", "/dns-query")
-    OPENDNS_SANDBOX_2 = ("208.67.222.2", "sandbox.opendns.com", "/dns-query")
-    OPENDNS_CHROMIUM = ("146.112.62.105", "www.opendns.com", "/dns-query")
 
     # NextDNS https://nextdns.io/ Firefox and Chromium use both
     NEXTDNS_1 = ("194.45.101.249", "dns.nextdns.io", "/dns-query")
@@ -122,7 +114,9 @@ class DnsResolvers(Enum):
                         DnsResolvers.QUAD_9_UNSECURED_1,
                         DnsResolvers.QUAD_9_UNSECURED_2,
                         DnsResolvers.YANDEX_1,
-                        DnsResolvers.YANDEX_2]
+                        DnsResolvers.YANDEX_2,
+                        DnsResolvers.NEXTDNS_1,
+                        DnsResolvers.NEXTDNS_2]
 
     def is_family(self):
         """
