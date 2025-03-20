@@ -58,7 +58,7 @@ class DnsResolvers(Enum):
     CISCO_FAMILY_2 = ("208.67.220.123", "familyshield.opendns.com", "/dns-query")
     CISCO_SANDBOX_1 = ("208.67.222.2", "sandbox.opendns.com", "/dns-query")
     CISCO_SANDBOX_2 = ("208.67.220.2", "sandbox.opendns.com", "/dns-query")
-    CISCO_CHROMIUM = ("146.112.62.105", "www.opendns.com", "/dns-query")
+    CISCO_CHROMIUM = ("146.112.41.2", "doh.opendns.com", "/dns-query")
 
     # Quad 9 https://www.quad9.net/support/faq/
     QUAD_9_1 = ("9.9.9.9", "dns.quad9.net", "/dns-query")
@@ -116,7 +116,8 @@ class DnsResolvers(Enum):
                         DnsResolvers.YANDEX_1,
                         DnsResolvers.YANDEX_2,
                         DnsResolvers.NEXTDNS_1,
-                        DnsResolvers.NEXTDNS_2]
+                        DnsResolvers.NEXTDNS_2,
+                        DnsResolvers.CISCO_CHROMIUM]
 
     def is_family(self):
         """

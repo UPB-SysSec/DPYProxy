@@ -71,6 +71,10 @@ class DnsModeDeterminator:
             _res += DnsModeDeterminator.parse_default_resolvers(DnsModeDeterminator.RESOLVERS_SUPPORT_UDP_TCP_DOT,
                                                                 [DnsProxyMode.UDP, DnsProxyMode.LAST_RESPONSE, DnsProxyMode.TCP, DnsProxyMode.TCP_FRAG, DnsProxyMode.DOT])
 
+            # append RESOLVERS_SUPPORT_UDP_TCP_DOH
+            _res += DnsModeDeterminator.parse_default_resolvers(DnsModeDeterminator.RESOLVERS_SUPPORT_UDP_TCP_DOH,
+                                                                [DnsProxyMode.UDP, DnsProxyMode.LAST_RESPONSE, DnsProxyMode.TCP, DnsProxyMode.TCP_FRAG, DnsProxyMode.DOH])
+
             # append RESOLVERS_SUPPORT_ENCRYPTED_EXCEPT_DOQ
             _res += DnsModeDeterminator.parse_default_resolvers(DnsModeDeterminator.RESOLVERS_SUPPORT_ENCRYPTED_EXCEPT_DOH3_DOQ,
                                                                 [DnsProxyMode.DOT, DnsProxyMode.DOH])
@@ -134,7 +138,10 @@ class DnsModeDeterminator:
                                                             DnsResolvers.YANDEX_FAMILY_2]
 
     # resolvers that support UDP/TCP/DoT
-    RESOLVERS_SUPPORT_UDP_TCP_DOT: list [DnsResolvers] = [DnsResolvers.CLEAN_BROWSING_ADULT_2]
+    RESOLVERS_SUPPORT_UDP_TCP_DOT: list[DnsResolvers] = [DnsResolvers.CLEAN_BROWSING_ADULT_2]
+
+    # resolvers that support UDP/TCP/DoH
+    RESOLVERS_SUPPORT_UDP_TCP_DOH: list[DnsResolvers] = [DnsResolvers.CISCO_CHROMIUM]
 
     # resolvers that support DoT/DoH
     RESOLVERS_SUPPORT_ENCRYPTED_EXCEPT_DOH3_DOQ: list[DnsResolvers] = [DnsResolvers.WIKIMEDIA,
