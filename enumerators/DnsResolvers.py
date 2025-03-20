@@ -88,8 +88,8 @@ class DnsResolvers(Enum):
     OPENDNS_CHROMIUM = ("146.112.62.105", "www.opendns.com", "/dns-query")
 
     # NextDNS https://nextdns.io/ Firefox and Chromium use both
-    NEXTDNS_1 = ("194.45.101.249", "steering.nextdns.io", "/dns-query")
-    NEXTDNS_2 = ("217.146.22.163", "steering.nextdns.io", "/dns-query")
+    NEXTDNS_1 = ("194.45.101.249", "dns.nextdns.io", "/dns-query")
+    NEXTDNS_2 = ("217.146.22.163", "dns.nextdns.io", "/dns-query")
 
     def __new__(cls, ip, hostname, path):
         obj = object.__new__(cls)
