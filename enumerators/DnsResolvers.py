@@ -30,6 +30,10 @@ class DnsResolvers(Enum):
     CLOUDFLARE_SECURITY_2 = ("1.0.0.2", "security.cloudflare-dns.com", "/dns-query")
     CLOUDFLARE_FAMILY_1 = ("1.1.1.3", "family.cloudflare-dns.com", "/dns-query")
     CLOUDFLARE_FAMILY_2 = ("1.0.0.3", "family.cloudflare-dns.com", "/dns-query")
+    CLOUDFLARE_MOZILLA_1 = ("162.159.61.4", "mozilla.cloudflare-dns.com", "/dns-query")
+    CLOUDFLARE_MOZILLA_2 = ("172.64.41.4", "mozilla.cloudflare-dns.com", "/dns-query")
+    CLOUDFLARE_CHROMIUM_1 = ("172.64.41.3", "chrome.cloudflare-dns.com", "/dns-query")
+    CLOUDFLARE_CHROMIUM_2 = ("162.159.61.3", "chrome.cloudflare-dns.com", "/dns-query")
 
     # https://developers.google.com/speed/public-dns
     GOOGLE_1 = ("8.8.8.8", "dns.google", "/dns-query")
@@ -74,6 +78,19 @@ class DnsResolvers(Enum):
     YANDEX_FAMILY_1 = ("77.88.8.7", "family.dot.dns.yandex.net", "/dns-query")
     YANDEX_FAMILY_2 = ("77.88.8.3", "family.dot.dns.yandex.net", "/dns-query")
 
+    # OpenDNS https://www.opendns.com/
+    OPENDNS_1 = ("208.67.222.222", "dns.opendns.com", "/dns-query")
+    OPENDNS_2 = ("208.67.220.220", "dns.opendns.com", "/dns-query")
+    OPENDNS_FAMILY_1 = ("208.67.222.123", "familyshield.opendns.com", "/dns-query")
+    OPENDNS_FAMILY_2 = ("208.67.220.123", "familyshield.opendns.com", "/dns-query")
+    OPENDNS_SANDBOX_1 = ("208.67.220.2", "sandbox.opendns.com", "/dns-query")
+    OPENDNS_SANDBOX_2 = ("208.67.222.2", "sandbox.opendns.com", "/dns-query")
+    OPENDNS_CHROMIUM = ("146.112.62.105", "www.opendns.com", "/dns-query")
+
+    # NextDNS https://nextdns.io/ Firefox and Chromium use both
+    NEXTDNS_1 = ("194.45.101.249", "steering.nextdns.io", "/dns-query")
+    NEXTDNS_2 = ("217.146.22.163", "steering.nextdns.io", "/dns-query")
+
     def __new__(cls, ip, hostname, path):
         obj = object.__new__(cls)
         obj._value_ = ip  # The actual enum value is the IP address
@@ -84,7 +101,7 @@ class DnsResolvers(Enum):
     def __str__(self):
         return f"{self.name} ({self.value}): {self.hostname}"
 
-    # TODO: add vercara and oracle?
+    # TODO: Adjust default and family
 
     def is_default(self):
         """
