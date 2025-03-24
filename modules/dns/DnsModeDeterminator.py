@@ -11,6 +11,8 @@ from network.NetworkAddress import NetworkAddress
 
 from dns.message import make_query
 
+from util.Util import parse_all_ips
+
 
 class DnsModeDeterminator:
     """
@@ -262,33 +264,13 @@ class DnsModeDeterminator:
         :param answer: The DNS response to check.
         """
         # extract requires record type and class
-        resolved_ips = []
-        _name = ""
-        _rdclass = ""
-        _rdtype = ""
 
-        try:
-            _name = answer.question[0].name
-            _rdclass = answer.question[0].rdclass
-            _rdtype = answer.question[0].rdtype
-
-            for record in answer.find_rrset(answer.answer, _name, _rdclass, _rdtype):
-                try:
-                    ip = record.address
-                    resolved_ips += [ip]
-                except Exception as e:
-                    logging.error(f"Could not extract IP from DNS response with exception {e}:\n{record}")
-                    continue
-                else:
-                    # check if IP lies in range
-                    for ip_range in self.compare_ip_ranges:
-                        if ip_address(ip) in ip_range:
-                            return not self.block_page_ips
-        except Exception as e:
-            if answer is not None:
-                logging.error(f"Could not extract IP from DNS response with exception {e}:\n{_name}, {_rdclass}, {_rdtype}, {answer.answer}")
-            else:
-                logging.error(f"Could not extract IP from DNS response with exception {e}:\n{_name}, {_rdclass}, {_rdtype}, None")
+        resolved_ips = parse_all_ips(answer)
+        for ip in resolved_ips:
+            # check if IP lies in range
+            for ip_range in self.compare_ip_ranges:
+                if ip_address(ip) in ip_range:
+                    return not self.block_page_ips
 
         logging.debug(f"None of the resolved IP addresses {resolved_ips} in specified IP ranges {self.compare_ip_ranges}.")
         return self.block_page_ips
