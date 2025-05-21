@@ -1,6 +1,7 @@
 # DPYProxy
-DPYProxy is a python proxy that implements DPI evasion mechanisms. Currently, TLS record fragmentation and TCP
-Fragmentation are implemented. All DPI evasion mechanisms can be enabled separately.
+DPYProxy is a python proxy that implements DPI evasion mechanisms. Currently, TLS record fragmentation, TLS version
+alterations in the TLS record header, and TCP Fragmentation are implemented. All DPI evasion mechanisms can be enabled
+separately.
 
 You can run DPYProxy locally or on a separate machine. It functions like an HTTP CONNECT proxy. I.e., you can specify
 it as your Firefox/Chrome/System Proxy. Socksv4/Socksv5 support is planned in the future.
@@ -27,7 +28,7 @@ Proxy for circumventing DPI-based censorship.
 
 Standard options:
   -h, --help            Show this help message and exit
-  --debug, --no-debug   Turns on debugging
+  --debug, --no-debug   Turns on debugging (default: False)
   --disabled_modes {HTTP,HTTPS,SNI,SOCKSv4,SOCKSv4a,SOCKSv5}
                         List of proxy modes to ignore. By default, all none are disabled. Hence, all are enabled
   --timeout TIMEOUT     Connection timeout in seconds
@@ -35,10 +36,12 @@ Standard options:
   --port PORT           Port the proxy server runs on
 
 Circumvention options:
+  --record_header_version RECORD_HEADER_VERSION
+                        Overwrites the TLS version in the TLS record with the given bytes. Pre-defined values ['DEFAULT', 'TLS10', 'TLS11', 'TLS12', 'TLS13_DRAFT_28', 'TLS13', 'SSL3', 'INVALID_SMALLER', 'INVALID_BIGGER'] or 2 byte long values such as 0303 or FFFF can be provided.
   --record_frag, --no-record_frag
-                        Whether to use record fragmentation to forwarded TLS handshake messages
+                        Whether to use record fragmentation to forwarded TLS handshake messages (default: True)
   --tcp_frag, --no-tcp_frag
-                        Whether to use TCP fragmentation to forwarded messages.
+                        Whether to use TCP fragmentation to forwarded messages. (default: True)
   --frag_size FRAG_SIZE
                         Bytes in each TCP/TLS record fragment
   --dot_resolver DOT_RESOLVER
@@ -52,7 +55,7 @@ Forward proxy options:
   --forward_proxy_mode {HTTP,HTTPS,SNI,SOCKSv4,SOCKSv4a,SOCKSv5}
                         The proxy type of the forward proxy
   --forward_proxy_resolve_address, --no-forward_proxy_resolve_address
-                        Whether to resolve domains before including them in the HTTP CONNECT request to the second proxy
+                        Whether to resolve domains before including them in the HTTP CONNECT request to the second proxy (default: False)
 ```
 
 ## Settings
@@ -60,18 +63,25 @@ Forward proxy options:
 ### --debug
 Turns on debugging statements.
 
-### --proxy_mode
-DPYProxy proxies based on the first message it receives. It can infer a destination from **HTTP GET** messages,
-**HTTP CONNECT** messages and **TLS ClientHello** messages that contain the **SNI** extension. By default, DPYProxy 
-detects the message type automatically. You can restrict it to a specific type using this argument. Use HTTP for 
-HTTP GET messages, HTTPS for HTTP CONNECT messages and SNI for TLS ClientHello messages.
+### --disabled_modes
+DPYProxy proxies based on the first message it receives. It can infer a destination from **HTTP GET** messages (HTTP),
+**HTTP CONNECT** messages (HTTPS), **TLS ClientHello** messages that contain the **SNI** extension(SNI), and SOCKS 
+proxy messages (SOCKSv4,SOCKSv4a,SOCKSv5). By default, DPYProxy detects the message type automatically. You can forbid
+certain detections modes using this argument.
 
 ### --timeout
 The timeout for which to keep open the connections in either direction. If no data is received for the specified time, 
-DPYProxy cancels the socket. In seconds.
+DPYProxy cancels the socket. In seconds. The default is 120 seconds.
+
+### --host
+The address on which DPYProxy listens for incoming connections. By default, it listens on `127.0.0.1` (localhost). 
 
 ### --port
-The port on which DPYProxy listens for incoming connections.
+The port on which DPYProxy listens for incoming connections. By default, it listens on `4433`.
+
+### --record_header_version
+Overwrites the TLS version in the TLS record with the given bytes. Pre-defined values are available and can be 
+indicated via text (e.g., `TLS13_DRAFT_28`).
 
 ### --record_frag
 Enables TLS record fragmentation. Any received TLS handshake message is fragmented into multiple TLS records. The size 
@@ -87,13 +97,9 @@ that accounts for header bytes.
 The size of the fragments in bytes. The default is 20 bytes. Note that a large fragment size can lead to no 
 fragmentation for smaller messages.
 
-### --dot
-DPYProxy resolves any domain it receives to detect the IP address of the destination. By default, it uses the system DNS
-server. By enabling this option, DPYProxy uses DNS over TLS to resolve the domain. You can specify the DNS server using
-the --dot-resolver argument.
-
 ### --dot-resolver
-The IP address of the DNS server to use for DNS over TLS. The default is Google Public DNS (`8.8.4.4`).
+The IP address of the DNS server to use for DNS over TLS. By default, no Dns over TLS is used and the system DNS server
+is used.
 
 ### --forward_proxy_...
 You can specify a forward proxy for IP censorship circumvention. DPYProxy will forward any message it receives to the 
@@ -147,7 +153,7 @@ docker-compose up
 
 # Roadmap
 
-I developed DPYProxy when writing a blogpost in which I circumvented the GFW with TLS record fragmentation. Thus, the 
+We developed DPYProxy when writing a blogpost in which we circumvented the GFW with TLS record fragmentation. Thus, the 
 functionality of DPYProxy is currently limited. Below, I gathered some potential avenues for the future.
 
 ## Implemented
