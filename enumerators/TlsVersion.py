@@ -3,7 +3,7 @@ from enum import Enum
 
 class TlsVersion(Enum):
     """
-    Modes the proxy can operate in
+    Various TLS versions that can be used to overwrite the TLS version in the TLS record.
     """
     DEFAULT = "XXXX"
     TLS10 = "0301",
