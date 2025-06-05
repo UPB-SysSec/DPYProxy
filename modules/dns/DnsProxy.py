@@ -2,6 +2,7 @@ import logging
 import select
 import socket
 import threading
+import time
 import traceback
 
 from dns.message import Message, make_query
@@ -46,8 +47,12 @@ class DnsProxy:
                 self.tcp_server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                 self.udp_server.settimeout(timeout)
                 self.continue_processing = True
+
                 # initialized in start()
                 self.domain_resolver: DomainResolver|None = None
+
+                # for time measurement
+                self.start_time = time.time()
 
     def handle_udp(self, message: bytes, address: NetworkAddress):
         answer = self.resolve_message(message, address)
@@ -163,6 +168,7 @@ class DnsProxy:
                 logging.info(f"{domain_resolver} consistently reachable, keeping!")
                 self.domain_resolver = domain_resolver
                 self.proxy_mode = self.domain_resolver.dns_mode
+                logging.info(f"Finding consistent mode and starting resolvers took {time.time() - self.start_time} seconds in total.")
 
 
 
