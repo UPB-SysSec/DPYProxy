@@ -52,7 +52,10 @@ class DnsModule(Module):
                                 default='185.15.56.0/22,91.198.174.0/24,195.200.68.0/24,193.46.90.0/24,198.35.26.0/23,208.80.152.0/22,103.102.166.0/24',
                                 help='A list of IP ranges the resolved IP of the censored domain lies in. The censored domain is specifiable in --dns_censored_domain.')
 
-        # TODO: Remove / Add SNI based on flag
+        dns_module.add_argument('--dns_add_sni', type=str,
+                                default=True,
+                                help='Whether or not to include the SNI for encrypted DNS modes. Defaults to True.')
+
     def extract_parameters(self, args: Namespace):
         server_address = NetworkAddress(args.dns_host, args.dns_port)
         resolver_address = NetworkAddress(args.dns_resolver_host, args.dns_port)
@@ -62,7 +65,8 @@ class DnsModule(Module):
                               timeout=args.dns_timeout,
                               dns_resolver_address=resolver_address,
                               censored_domain=args.dns_censored_domain,
-                              censored_domain_ip_ranges=[x for x in args.dns_censored_domain_ip_ranges.split(",")])
+                              censored_domain_ip_ranges=[x for x in args.dns_censored_domain_ip_ranges.split(",")],
+                              add_sni=args.dns_add_sni)
 
     def start(self):
         self.proxy.start()

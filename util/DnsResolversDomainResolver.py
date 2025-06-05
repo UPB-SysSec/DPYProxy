@@ -17,7 +17,7 @@ TIMEOUT = 5
 
 def main():
     local_address = NetworkAddress("127.0.0.53", 53)
-    local_resolver = DomainResolver(DnsProxyMode.UDP, local_address, TIMEOUT)
+    local_resolver = DomainResolver(DnsProxyMode.UDP, local_address, TIMEOUT, "")
     for resolver in DnsResolvers:
         if resolver.hostname == "":
             continue # No need to test Gcore

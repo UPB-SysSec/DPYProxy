@@ -42,11 +42,17 @@ class DomainResolver:
                  dns_mode: DnsProxyMode,
                  resolver: NetworkAddress,
                  timeout: int,
-                 tcp_frag_size: int = DNS_TCP_FRAG_SIZE):
+                 hostname: str,
+                 tcp_frag_size: int = DNS_TCP_FRAG_SIZE,
+                 add_sni: bool = True,
+                 path: str = "/dns-query"):
         self.dns_mode = dns_mode
         self.resolver = resolver
         self.timeout = timeout
+        self.hostname = hostname
         self.tcp_frag_size = tcp_frag_size
+        self.add_sni = add_sni
+        self.path = path
 
     @staticmethod
     def resolve_local(domain: str) -> str:
@@ -341,7 +347,7 @@ class DomainResolver:
         Resolves the given DNS message using the configured mode on the configured provider using the configured
         timeout and frag size.
         """
-        return DomainResolver.resolve_static(mode=self.dns_mode, message=message, resolver=self.resolver, timeout=self.timeout, frag_size=self.tcp_frag_size)
+        return DomainResolver.resolve_static(mode=self.dns_mode, message=message, resolver=self.resolver, timeout=self.timeout, frag_size=self.tcp_frag_size, hostname=self.hostname, add_sni= self.add_sni, path=self.path)
 
     def works(self, message: Message) -> bool:
         """

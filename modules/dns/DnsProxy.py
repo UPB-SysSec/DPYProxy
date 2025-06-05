@@ -27,7 +27,8 @@ class DnsProxy:
                  proxy_mode: DnsProxyMode,
                  dns_resolver_address: NetworkAddress,
                  censored_domain: str,
-                 censored_domain_ip_ranges: list[str]):
+                 censored_domain_ip_ranges: list[str],
+                 add_sni: bool):
                 # timeout for socket reads and message reception
                 self.timeout = timeout
                 self.address = address
@@ -35,6 +36,7 @@ class DnsProxy:
                 self.censored_domain = censored_domain
                 self.censored_domain_ip_ranges = censored_domain_ip_ranges
                 self.proxy_mode = proxy_mode
+                self.add_sni = add_sni
 
                 # initialize UDP and TCP server sockets
                 self.udp_server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -116,14 +118,18 @@ class DnsProxy:
             yield DomainResolver(dns_mode=self.proxy_mode,
                                  resolver=NetworkAddress(self.resolver_address.host,
                                                          self.proxy_mode.default_port()),
-                                 timeout=self.timeout)
+                                 timeout=self.timeout,
+                                 hostname="",
+                                 add_sni=self.add_sni)
         else:
             logging.info(
                 f"mode {self.proxy_mode} and resolver {self.resolver_address.host}:{self.resolver_address.port} specified. Using these values.")
             # mode, resolver, and port specified
             yield DomainResolver(dns_mode=self.proxy_mode,
                                  resolver=self.resolver_address,
-                                 timeout=self.timeout)
+                                 timeout=self.timeout,
+                                 hostname="",
+                                 add_sni=self.add_sni)
 
 
 
@@ -141,7 +147,10 @@ class DnsProxy:
                 dns_resolver: DnsResolver = next(domain_resolver_generator)
                 domain_resolver: DomainResolver = DomainResolver(dns_mode=dns_resolver.mode,
                                                                  resolver=dns_resolver.address,
-                                                                 timeout=self.timeout)
+                                                                 timeout=self.timeout,
+                                                                 hostname=dns_resolver.hostname,
+                                                                 add_sni=self.add_sni,
+                                                                 path=dns_resolver.path)
             except StopIteration:
                 raise DnsException("No working circumvention method found according to specification in CLI.")
 
