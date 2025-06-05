@@ -1,4 +1,5 @@
 import logging
+import random
 from ipaddress import ip_network, ip_address
 
 import dns.message
@@ -207,56 +208,71 @@ class DnsModeDeterminator:
         :param max_retries: Number of maximum retries to determine success.
         :param add_sni: Whether to include an SNI extension.
         """
-        for _mode in [DnsProxyMode.DOT, DnsProxyMode.DOH, DnsProxyMode.DOH3, DnsProxyMode.DOQ]:
-            if mode is None or mode == _mode:
-                if add_sni:
-                    yield from self.generate_resolvers_supporting_mode(mode=_mode, validate_ip=False,
-                                                                       min_retries=min_retries, max_retries=max_retries,
-                                                                       add_sni=add_sni)
-                else:
-                    yield from self.generate_resolvers_supporting_mode(mode=_mode, validate_ip=True,
-                                                                       min_retries=min_retries, max_retries=max_retries,
-                                                                       add_sni=add_sni)
+        all_modes = [
+            DnsProxyMode.DOT, DnsProxyMode.DOH, DnsProxyMode.DOH3, DnsProxyMode.DOQ,
+            DnsProxyMode.UDP, DnsProxyMode.TCP, DnsProxyMode.TCP_FRAG, DnsProxyMode.LAST_RESPONSE
+        ]
 
-        for _mode in [DnsProxyMode.UDP, DnsProxyMode.TCP, DnsProxyMode.TCP_FRAG, DnsProxyMode.LAST_RESPONSE]:
-            if mode is None or mode == _mode:
-                yield from self.generate_resolvers_supporting_mode(mode=_mode, validate_ip=True,
-                                                                   min_retries=min_retries, max_retries=max_retries,
-                                                                   add_sni=add_sni)
+        # Restrict to the given mode or use all
+        modes_to_test = [mode] if mode is not None else all_modes
 
+        # Generate all (mode, resolver) combinations
+        resolver_mode_pairs = [
+            (_mode, resolver)
+            for _mode in modes_to_test
+            for resolver in self.resolvers
+            if resolver.mode == _mode
+        ]
 
-    def generate_resolvers_supporting_mode(self, mode: DnsProxyMode, validate_ip: bool, min_retries: int = 3, max_retries: int = 20, add_sni: bool = True):
+        # Shuffle to ensure full random order across modes and resolvers
+        random.shuffle(resolver_mode_pairs)
+
+        for _mode, resolver in resolver_mode_pairs:
+            validate_ip = not add_sni if _mode in [DnsProxyMode.DOT, DnsProxyMode.DOH, DnsProxyMode.DOH3,
+                                                   DnsProxyMode.DOQ] else True
+            yield from self.try_resolver(resolver, mode=_mode, validate_ip=validate_ip,
+                                          min_retries=min_retries, max_retries=max_retries, add_sni=add_sni)
+
+    def try_resolver(self, resolver, mode: DnsProxyMode, validate_ip: bool, min_retries: int, max_retries: int,
+                      add_sni: bool):
         """
         Generator function that determines all reachable DNS resolvers for the specified mode. If validate_ip is True, the DNS resolver must respond with a pre-defined IP address.
         """
-        for resolver in filter(lambda _resolver: _resolver.mode == mode, self.resolvers):
-            logging.debug(f"Trying to resolve {resolver.name} for mode {resolver.mode}")
-            success = False
-            for i in range(max_retries):
-                resolver.tries += 1
-                try:
-                    answer = DomainResolver.resolve_static(mode=mode, message=self.censored_request, resolver=resolver.address, timeout=self.timeout, hostname=resolver.hostname, add_sni=add_sni, path=resolver.path)
-                except Exception as e:
-                    logging.debug(f"Could not resolve to {resolver.name} for mode {resolver.mode} with exception {e}")
-                    print(f"Could not resolve to {resolver.name} for mode {resolver.mode} with exception {e}")
-                else:
-                    if validate_ip:
-                        if self.assert_correct_ip(answer):
-                            logging.debug(f"Successfully resolved to {resolver.name} for mode {resolver.mode}")
-                            resolver.successes += 1
-                            if i+1 >= min_retries and resolver.successes / (i+1) >= 2/3:
-                                success = True
-                                break
-                        else:
-                            logging.debug(f"Could not resolve to {resolver.name} for mode {resolver.mode}")
-                    else:
-                        logging.debug(f"Successfully resolved to {resolver.name} for mode {resolver.mode}")
+        logging.debug(f"Trying to resolve {resolver.name} for mode {mode}")
+        success = False
+
+        for i in range(max_retries):
+            resolver.tries += 1
+            try:
+                answer = DomainResolver.resolve_static(
+                    mode=mode,
+                    message=self.censored_request,
+                    resolver=resolver.address,
+                    timeout=self.timeout,
+                    hostname=resolver.hostname,
+                    add_sni=add_sni,
+                    path=resolver.path
+                )
+            except Exception as e:
+                logging.debug(f"Could not resolve to {resolver.name} for mode {mode} with exception {e}")
+            else:
+                if validate_ip:
+                    if self.assert_correct_ip(answer):
+                        logging.debug(f"Successfully resolved to {resolver.name} for mode {mode}")
                         resolver.successes += 1
-                        if i + 1 >= min_retries and resolver.successes / (i + 1) >= 2/3:
+                        if i + 1 >= min_retries and resolver.successes / (i + 1) >= 2 / 3:
                             success = True
                             break
-            if success:
-                yield resolver
+                    else:
+                        logging.debug(f"Incorrect IP from {resolver.name} in mode {mode}")
+                else:
+                    logging.debug(f"Successfully resolved to {resolver.name} for mode {mode}")
+                    resolver.successes += 1
+                    if i + 1 >= min_retries and resolver.successes / (i + 1) >= 2 / 3:
+                        success = True
+                        break
+        if success:
+            yield resolver
 
     def assert_correct_ip(self, answer: dns.message.Message) -> bool:
         """
