@@ -169,16 +169,19 @@ class DnsProxy:
                 self.domain_resolver = domain_resolver
                 self.proxy_mode = self.domain_resolver.dns_mode
                 logging.info(f"Finding consistent mode and starting resolvers took {time.time() - self.start_time} seconds in total.")
+        return time.time() - self.start_time
 
 
 
-    def start(self):
+    def start(self, time_measurement_only:bool = False):
         """
         Starts the proxy. After calling the proxy, listens for connections.
         """
         try:
             # determine circumvention method
-            self.configure()
+            startup_time = self.configure()
+            if time_measurement_only:
+                return startup_time
         except DnsException as e:
             logging.error(f"{e}")
         else:
