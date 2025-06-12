@@ -1,6 +1,10 @@
 import logging
-import sys
 import statistics
+
+# hack to add parent to pythonpath
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 from enumerators.DnsProxyMode import DnsProxyMode
 from modules.dns.DnsProxy import DnsProxy
