@@ -28,14 +28,16 @@ class DnsProxy:
                  proxy_mode: DnsProxyMode,
                  dns_resolver_address: NetworkAddress,
                  censored_domain: str,
-                 censored_domain_ip_ranges: list[str],
+                 compare_ip_ranges: list[str],
+                 block_page_ips: bool,
                  add_sni: bool):
                 # timeout for socket reads and message reception
                 self.timeout = timeout
                 self.address = address
                 self.resolver_address = dns_resolver_address
                 self.censored_domain = censored_domain
-                self.censored_domain_ip_ranges = censored_domain_ip_ranges
+                self.compare_ip_ranges = compare_ip_ranges
+                self.block_page_ips = block_page_ips
                 self.proxy_mode = proxy_mode
                 self.add_sni = add_sni
 
@@ -108,12 +110,12 @@ class DnsProxy:
         """
         if self.proxy_mode == DnsProxyMode.AUTO:
             _gen = DnsModeDeterminator(self.timeout, self.censored_domain,
-                                self.censored_domain_ip_ranges).generate_working_resolver()
+                                       self.compare_ip_ranges, self.block_page_ips).generate_working_resolver()
             yield from _gen
 
         elif self.resolver_address.host is None:
             _gen = DnsModeDeterminator(self.timeout, self.censored_domain,
-                                self.censored_domain_ip_ranges).generate_working_resolver(self.proxy_mode)
+                                       self.compare_ip_ranges, self.block_page_ips).generate_working_resolver(self.proxy_mode)
             yield from _gen
 
         elif self.resolver_address.port is not None:
@@ -160,7 +162,7 @@ class DnsProxy:
                 raise DnsException("No working circumvention method found according to specification in CLI.")
 
             # determine if it is working
-            logging.info(f"Found working circumvention method / resolver {domain_resolver}! Checking of consistently reachable!")
+            logging.info(f"Found working circumvention method / resolver {domain_resolver}! Checking if consistently reachable!")
             found_working  = domain_resolver.works(message=make_query(self.censored_domain, "A"))
             if not found_working:
                 logging.info(f"{domain_resolver} not consistently reachable, attempting to generate new resolver.")

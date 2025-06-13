@@ -48,9 +48,13 @@ class DnsModule(Module):
                                 # TODO: add .txt document with example values for varying countries
                                 help='A domain name censored in your location. Used to determine working circumventions methods. Specify together with --dns_censored_domain_ip')
 
-        dns_module.add_argument('--dns_censored_domain_ip_ranges', type=str,
+        dns_module.add_argument('--dns_compare_ip_ranges', type=str,
                                 default='185.15.56.0/22,91.198.174.0/24,195.200.68.0/24,193.46.90.0/24,198.35.26.0/23,208.80.152.0/22,103.102.166.0/24',
                                 help='A list of IP ranges the resolved IP of the censored domain lies in. The censored domain is specifiable in --dns_censored_domain.')
+
+        dns_module.add_argument('--dns_block_page_ips', type=bool,
+                                default=False,
+                                help='Whether the given IP ranges to compare are block page IPs or not. Default is False.')
 
         dns_module.add_argument('--dns_add_sni', type=str,
                                 default=True,
@@ -65,7 +69,8 @@ class DnsModule(Module):
                               timeout=args.dns_timeout,
                               dns_resolver_address=resolver_address,
                               censored_domain=args.dns_censored_domain,
-                              censored_domain_ip_ranges=[x for x in args.dns_censored_domain_ip_ranges.split(",")],
+                              compare_ip_ranges=[x for x in args.dns_compare_ip_ranges.split(",")],
+                              block_page_ips=args.dns_block_page_ips,
                               add_sni=args.dns_add_sni)
 
     def start(self):

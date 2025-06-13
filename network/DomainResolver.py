@@ -1,3 +1,4 @@
+import logging
 import socket
 import time
 
@@ -359,8 +360,8 @@ class DomainResolver:
         for _ in range(DomainResolver.TRIES_CONFIRM_WORKING):
             try:
                 self.resolve(message=message)
-            except (DnsException, UnexpectedEOF):
-                pass
+            except Exception as e:
+                logging.debug(f"Could not resolve to {self.resolver} for mode {self.dns_mode} with exception {e}")
             else:
                 working += 1
         return working >= DomainResolver.THRESHOLD_CONFIRM_WORKING

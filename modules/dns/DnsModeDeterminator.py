@@ -200,7 +200,7 @@ class DnsModeDeterminator:
         self.censored_request = make_query(censored_domain, "A")
         self.resolvers: list[DnsResolver] = DnsModeDeterminator.generate_resolvers(restrict_advertised)
 
-    def generate_working_resolver(self, mode: DnsProxyMode = None, min_retries: int = 3, max_retries: int = 20, add_sni: bool = True):
+    def generate_working_resolver(self, mode: DnsProxyMode = None, min_retries: int = 1, max_retries: int = 1, add_sni: bool = True):
         """
         Generator that yields all working DnsResolvers.
         :param mode: Restricts resolver generation to the specified mode.
