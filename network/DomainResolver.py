@@ -14,6 +14,7 @@ from enumerators.DnsProxyMode import DnsProxyMode
 from exception.DnsException import DnsException
 from network.NetworkAddress import NetworkAddress
 from network.tcp.WrappedTcpSocket import WrappedTcpSocket
+from util.Util import parse_all_ips
 
 
 def fix_transaction_id(f):
@@ -61,7 +62,6 @@ class DomainResolver:
         """
         Resolves the given domain to an ip address using the system's DNS resolver.
         """
-        # TODO: deprecate in favor of resolve_udp with local resolver
         return socket.gethostbyname(domain)
 
     @staticmethod
@@ -240,6 +240,22 @@ class DomainResolver:
             return quic(message, where=resolver.host, port=resolver.port, timeout=timeout, server_hostname=hostname, hostname=hostname, verify=True)
         else:
             return quic(message, where=resolver.host, port=resolver.port, timeout=timeout, verify=False)
+
+    @staticmethod
+    def resolve_udp_static_to_ip(domain: str, resolver: NetworkAddress, timeout: int) -> str:
+        """
+        Resolves the given domain to an ip address using DNS over UDP on the given DNS resolver.
+        :param domain: the domain to resolve
+        :param resolver: the DNS resolver to use
+        :param timeout: the DNS request timeout
+        :return: The resolved ip address
+        """
+        message = dns.message.make_query(domain, "A")
+        response = DomainResolver.resolve_udp_static(message, resolver, timeout)
+        ips = parse_all_ips(response)
+        if not ips or len(ips) == 0:
+            raise DnsException(f"No IPs found for domain {domain} using resolver {resolver}")
+        return ips[0]
 
     @staticmethod
     def resolve_udp_static(message: Message, resolver: NetworkAddress, timeout: int) -> Message:

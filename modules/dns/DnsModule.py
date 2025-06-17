@@ -16,9 +16,9 @@ class DnsModule(Module):
         self.proxy: DnsProxy | None = None
         self.server_address: NetworkAddress | None = None
 
-
-    def register_parameters(self):
-        dns_module = self.parser.add_argument_group('DNS Module')
+    @staticmethod
+    def register_parameters(parser: ArgumentParser):
+        dns_module = parser.add_argument_group('DNS Module')
 
         dns_module.add_argument('--dns_mode', type=DnsProxyMode,
                                 default=DnsProxyMode.AUTO,
@@ -29,11 +29,11 @@ class DnsModule(Module):
                                 help=f'Connection timeout in seconds. For the {DnsProxyMode.LAST_RESPONSE} mode this timeout will always be reached. Set this timeout and the timeout of calling application accordingly.')
 
         dns_module.add_argument('--dns_host', type=str,
-                                default="localhost",
+                                default="127.0.0.1",
                                 help='Address the proxy server runs on')
 
         dns_module.add_argument('--dns_port', type=int,
-                                default=4433,
+                                default=5533,
                                 help='Port the proxy server runs on')
 
         dns_module.add_argument('--dns_resolver_host', type=str,
@@ -66,7 +66,7 @@ class DnsModule(Module):
         resolver_address = NetworkAddress(args.dns_resolver_host, args.dns_port)
 
         self.proxy = DnsProxy(proxy_mode=args.dns_mode,
-                              address=server_address,
+                              address=self.server_address,
                               timeout=args.dns_timeout,
                               dns_resolver_address=resolver_address,
                               censored_domain=args.dns_censored_domain,

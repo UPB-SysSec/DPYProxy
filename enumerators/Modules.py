@@ -20,3 +20,12 @@ class Modules(Enum):
             return TlsModule(parser)
         elif self == Modules.DNS:
             return DnsModule(parser)
+
+    def get_class(self):
+        """
+        Returns the class of the module.
+        """
+        if self == Modules.TLS:
+            return TlsModule
+        elif self == Modules.DNS:
+            return DnsModule

@@ -70,8 +70,8 @@ class TcpProxy:
         self.server.bind((self.address.host, self.address.port))
         self.server.listen()
         print(f"### Started TCP proxy on {self.address.host}:{self.address.port} ###")
-        if self.dot_ip:
-            logging.debug(f"Using DoT resolver {self.dot_ip}")
+        if self.dns_server:
+            logging.debug(f"Using DNS server {self.dns_server}")
         if self.forward_proxy:
             logging.debug(f"Using forward proxy {self.forward_proxy}")
         while self.continue_processing:

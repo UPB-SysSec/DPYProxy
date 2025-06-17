@@ -71,7 +71,7 @@ class TcpConnectionHandler:
         if (not is_valid_ipv4_address(final_server_address.host)) and \
                 (self.forward_proxy_resolve_address or self.forward_proxy is None):
             if self.dns_server:
-                host = DomainResolver.resolve_udp_static(message = make_query(final_server_address.host, "A"), resolver=self.dns_server, timeout=self.timeout)
+                host = DomainResolver.resolve_udp_static_to_ip(final_server_address.host, resolver=self.dns_server, timeout=self.timeout)
             else:
                 host = DomainResolver.resolve_local(final_server_address.host)
             self.debug(f"Resolved {host} from {final_server_address.host}")

@@ -20,12 +20,13 @@ class TlsModule(Module):
         self.proxy: TcpProxy | None = None
         self.dns_server = None
 
-    def register_parameters(self):
+    @staticmethod
+    def register_parameters(parser: ArgumentParser):
 
         def list_of_modes(arg):
             return list(map(lambda x: TcpProxyMode(x), arg.split(",")))
 
-        tls_module = self.parser.add_argument_group('TLS Module')
+        tls_module = parser.add_argument_group('TLS Module')
 
         tls_module.add_argument('--tls_disabled_modes', type=list_of_modes,
                                 choices=TcpProxyMode,
@@ -33,7 +34,7 @@ class TlsModule(Module):
                                 help='List of proxy modes to ignore. By default, all none are disabled. Hence, all are enabled')
 
         tls_module.add_argument('--tls_timeout', type=int,
-                             default=120,
+                             default=10,
                              help='Connection timeout in seconds')
 
         tls_module.add_argument('--tls_host', type=str,
@@ -61,7 +62,7 @@ class TlsModule(Module):
 
         tls_module.add_argument('--tls_dns_server_ip', type=str,
                                     default=None,
-                                    help='DNS server IP for all DNS queries of the TLS module. If not given, the OS default DNS server is used.')
+                                    help='DNS server IP for all DNS queries of the TLS module. If not given, the DNS server started by the DNS module us used. If DNS module is not used, the OS default DNS server is used.')
 
         tls_module.add_argument('--tls_dns_server_port', type=int,
                                     default=53,
@@ -93,7 +94,7 @@ class TlsModule(Module):
         if args.tls_forward_proxy_port is not None:
             forward_proxy = NetworkAddress(args.tls_forward_proxy_host, args.tls_forward_proxy_port)
 
-        if args.tls_dns_server_ip is not None:
+        if args.tls_dns_server_ip is not None and self.dns_server is None:
             self.dns_server = NetworkAddress(args.tls_dns_server_ip, args.tls_dns_server_port)
 
         if args.tls_forward_proxy_mode in [TcpProxyMode.HTTP, TcpProxyMode.SNI] and args.tls_forward_proxy_mode != args.proxy_mode:
@@ -105,7 +106,7 @@ class TlsModule(Module):
                               args.tls_forward_proxy_resolve_address)
 
     def start(self):
-        threading.Thread(target=self.proxy.start()).start()
+        self.proxy.start()
 
     def stop(self):
         self.proxy.continue_processing = False
