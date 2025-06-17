@@ -1,6 +1,8 @@
 import logging
 import socket
 
+from dns.message import make_query
+
 from enumerators.TcpProxyMode import TcpProxyMode
 from exception.ParserException import ParserException
 from network.DomainResolver import DomainResolver
@@ -29,7 +31,7 @@ class TcpConnectionHandler:
                  record_frag: bool,
                  tcp_frag: bool,
                  frag_size: int,
-                 dot_ip: str,
+                 dns_server: NetworkAddress,
                  disabled_modes: list[TcpProxyMode],
                  forward_proxy: NetworkAddress,
                  forward_proxy_mode: TcpProxyMode,
@@ -41,7 +43,7 @@ class TcpConnectionHandler:
         self.record_frag = record_frag
         self.tcp_frag = tcp_frag
         self.frag_size = frag_size
-        self.dot_ip = dot_ip
+        self.dns_server = dns_server
         self.disabled_modes = disabled_modes
         self.forward_proxy = forward_proxy
         self.forward_proxy_mode = forward_proxy_mode
@@ -61,23 +63,20 @@ class TcpConnectionHandler:
         # determine destination address
         try:
             final_server_address, http_version = self.get_destination_address()
-            # TODO: If ProxyMode.DNS then also get resolve target
         except ParserException as e:
             logging.warning(f"Could not parse initial proxy message with {e}. Stopping!")
             return
 
-        # TODO: If ProxyMode.DNS then this should probably be done via selected circumvention method also
         # resolve domain if no forward proxy or the forward proxy needs a resolved address
         if (not is_valid_ipv4_address(final_server_address.host)) and \
                 (self.forward_proxy_resolve_address or self.forward_proxy is None):
-            if self.dot_ip:
-                host = DomainResolver.resolve(final_server_address.host, self.dot_ip)
+            if self.dns_server:
+                host = DomainResolver.resolve_udp_static(message = make_query(final_server_address.host, "A"), resolver=self.dns_server, timeout=self.timeout)
             else:
-                host = DomainResolver.resolve_plain(final_server_address.host)
+                host = DomainResolver.resolve_local(final_server_address.host)
             self.debug(f"Resolved {host} from {final_server_address.host}")
             final_server_address.host = host
 
-        # TODO: If ProxyMode.DNS and DoT/DoH/DoQ selected, this should be respective target directly
         # set correct target
         if self.forward_proxy is None:
             target_address = (final_server_address.host, final_server_address.port)
@@ -86,7 +85,6 @@ class TcpConnectionHandler:
             self.debug(f"Using forward proxy {target_address}")
 
         # open socket to server
-        # TODO: If ProxyMode.DNS then this should be UDP with circumventions or separate DoT/DoQ/DoH requests
         try:
             server_socket = socket.create_connection(target_address)
         except Exception as e:
@@ -108,7 +106,6 @@ class TcpConnectionHandler:
         if self.forward_proxy is not None:
             self.connect_forward_proxy(server_socket, final_server_address, http_version)
 
-        # TODO: If ProxyMode.DNS then we probably do not need a forwarder once we obtain the correct DNS entry?
         # start proxying
         Forwarder(self.connection_socket, self.address.__str__(), server_socket,
                   f"{target_address[0]}:{target_address[1]}", self.record_frag, self.frag_size).start()
