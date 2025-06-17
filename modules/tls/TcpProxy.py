@@ -19,7 +19,7 @@ class TcpProxy:
                  record_frag: bool = False,
                  tcp_frag: bool = False,
                  frag_size: int = 20,
-                 dns_server: NetworkAddress = None,
+                 dot_ip: str = "8.8.4.4",
                  disabled_modes: list[TcpProxyMode] = None,
                  forward_proxy: NetworkAddress = None,
                  forward_proxy_mode: TcpProxyMode = TcpProxyMode.HTTPS,
@@ -33,7 +33,7 @@ class TcpProxy:
         self.tcp_frag = tcp_frag
         self.frag_size = frag_size
         # whether to use dot for domain resolution
-        self.dns_server = dns_server
+        self.dot_ip = dot_ip
         self.disabled_modes = disabled_modes
         if self.disabled_modes is None:
             self.disabled_modes = []
@@ -54,7 +54,7 @@ class TcpProxy:
             self.record_frag,
             self.tcp_frag,
             self.frag_size,
-            self.dns_server,
+            self.dot_ip,
             self.disabled_modes,
             self.forward_proxy,
             self.forward_proxy_mode,

@@ -59,13 +59,9 @@ class TlsModule(Module):
                                     default=20,
                                     help='Bytes in each TCP/TLS record fragment')
 
-        tls_module.add_argument('--tls_dns_server_ip', type=str,
+        tls_module.add_argument('--tls_dot_resolver', type=str,
                                     default=None,
-                                    help='DNS server IP for all DNS queries of the TLS module. If not given, the OS default DNS server is used.')
-
-        tls_module.add_argument('--tls_dns_server_port', type=int,
-                                    default=53,
-                                    help='DNS server port for all DNS queries. Only set if a DNS server IP is given. If not given, the default port 53 is used.')
+                                    help='DNS server IP for DNS over TLS')
 
         tls_module.add_argument('--tls_forward_proxy_host', type=str,
                                    default='localhost',
@@ -93,16 +89,12 @@ class TlsModule(Module):
         if args.tls_forward_proxy_port is not None:
             forward_proxy = NetworkAddress(args.tls_forward_proxy_host, args.tls_forward_proxy_port)
 
-        dns_server = None
-        if args.tls_dns_server_ip is not None:
-            dns_server = NetworkAddress(args.tls_dns_server_ip, args.tls_dns_server_port)
-
         if args.tls_forward_proxy_mode in [TcpProxyMode.HTTP, TcpProxyMode.SNI] and args.tls_forward_proxy_mode != args.proxy_mode:
             logging.debug("Forward proxy modes HTTP and SNI only usable if proxy mode is HTTP or SNI respectively.")
             exit()
 
         self.proxy = TcpProxy(server_address, args.tls_timeout, args.tls_record_frag, args.tls_tcp_frag, args.tls_frag_size,
-                              dns_server, args.tls_disabled_modes, forward_proxy, args.tls_forward_proxy_mode,
+                              args.tls_dot_resolver, args.tls_disabled_modes, forward_proxy, args.tls_forward_proxy_mode,
                               args.tls_forward_proxy_resolve_address)
 
     def start(self):
