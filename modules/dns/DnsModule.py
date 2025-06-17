@@ -14,6 +14,7 @@ class DnsModule(Module):
     def __init__(self, parser: ArgumentParser):
         super().__init__(parser)
         self.proxy: DnsProxy | None = None
+        self.server_address: NetworkAddress | None = None
 
 
     def register_parameters(self):
@@ -61,7 +62,7 @@ class DnsModule(Module):
                                 help='Whether or not to include the SNI for encrypted DNS modes. Defaults to True.')
 
     def extract_parameters(self, args: Namespace):
-        server_address = NetworkAddress(args.dns_host, args.dns_port)
+        self.server_address = NetworkAddress(args.dns_host, args.dns_port)
         resolver_address = NetworkAddress(args.dns_resolver_host, args.dns_port)
 
         self.proxy = DnsProxy(proxy_mode=args.dns_mode,
@@ -78,4 +79,3 @@ class DnsModule(Module):
 
     def stop(self):
         self.proxy.continue_processing = False
-

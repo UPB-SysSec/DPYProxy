@@ -18,7 +18,7 @@ class TlsModule(Module):
     def __init__(self, parser: ArgumentParser):
         super().__init__(parser)
         self.proxy: TcpProxy | None = None
-
+        self.dns_server = None
 
     def register_parameters(self):
 
@@ -93,16 +93,15 @@ class TlsModule(Module):
         if args.tls_forward_proxy_port is not None:
             forward_proxy = NetworkAddress(args.tls_forward_proxy_host, args.tls_forward_proxy_port)
 
-        dns_server = None
         if args.tls_dns_server_ip is not None:
-            dns_server = NetworkAddress(args.tls_dns_server_ip, args.tls_dns_server_port)
+            self.dns_server = NetworkAddress(args.tls_dns_server_ip, args.tls_dns_server_port)
 
         if args.tls_forward_proxy_mode in [TcpProxyMode.HTTP, TcpProxyMode.SNI] and args.tls_forward_proxy_mode != args.proxy_mode:
             logging.debug("Forward proxy modes HTTP and SNI only usable if proxy mode is HTTP or SNI respectively.")
             exit()
 
         self.proxy = TcpProxy(server_address, args.tls_timeout, args.tls_record_frag, args.tls_tcp_frag, args.tls_frag_size,
-                              dns_server, args.tls_disabled_modes, forward_proxy, args.tls_forward_proxy_mode,
+                              self.dns_server, args.tls_disabled_modes, forward_proxy, args.tls_forward_proxy_mode,
                               args.tls_forward_proxy_resolve_address)
 
     def start(self):
@@ -111,4 +110,14 @@ class TlsModule(Module):
     def stop(self):
         self.proxy.continue_processing = False
         logging.info("Waiting for proxy to stop")
+
+    def set_dns_server(self, dns_server: NetworkAddress):
+        """
+        Sets the DNS server for the TLS module.
+        :param dns_server: NetworkAddress of the DNS server to use.
+        """
+        if not self.dns_server:
+            self.dns_server = dns_server
+        else:
+            logging.warning("DNS server manually overwritten in TLS module. Not setting address of DNS module server.")
 
