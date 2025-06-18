@@ -1,0 +1,12 @@
+{
+    "dns_mode": "DOT",
+    "resolver": {
+        "host": "185.228.169.9",
+        "port": 853
+    },
+    "timeout": 3,
+    "hostname": "security-filter-dns.cleanbrowsing.org",
+    "tcp_frag_size": 20,
+    "add_sni": true,
+    "path": "/doh/security-filter/"
+}

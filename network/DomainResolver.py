@@ -1,6 +1,7 @@
 import logging
 import socket
 import time
+from dataclasses import asdict
 
 import dns
 import httpx
@@ -56,6 +57,29 @@ class DomainResolver:
         self.tcp_frag_size = tcp_frag_size
         self.add_sni = add_sni
         self.path = path
+
+    def to_dict(self):
+        return {
+            "dns_mode": self.dns_mode.value,
+            "resolver": asdict(self.resolver),
+            "timeout": self.timeout,
+            "hostname": self.hostname,
+            "tcp_frag_size": self.tcp_frag_size,
+            "add_sni": self.add_sni,
+            "path": self.path
+        }
+
+    @staticmethod
+    def from_dict(data):
+        return DomainResolver(
+            dns_mode=DnsProxyMode(data["dns_mode"]),
+            resolver=NetworkAddress(**data["resolver"]),
+            timeout=data["timeout"],
+            hostname=data["hostname"],
+            tcp_frag_size=data["tcp_frag_size"],
+            add_sni=data["add_sni"],
+            path=data["path"]
+        )
 
     @staticmethod
     def resolve_local(domain: str) -> str:

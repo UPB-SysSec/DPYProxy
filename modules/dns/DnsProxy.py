@@ -1,4 +1,6 @@
+import json
 import logging
+import os
 import select
 import socket
 import threading
@@ -30,7 +32,8 @@ class DnsProxy:
                  censored_domain: str,
                  compare_ip_ranges: list[str],
                  block_page_ips: bool,
-                 add_sni: bool):
+                 add_sni: bool,
+                 skip_working_file: bool):
                 # timeout for socket reads and message reception
                 self.timeout = timeout
                 self.address = address
@@ -40,6 +43,7 @@ class DnsProxy:
                 self.block_page_ips = block_page_ips
                 self.proxy_mode = proxy_mode
                 self.add_sni = add_sni
+                self.skip_working_file = skip_working_file
 
                 # initialize UDP and TCP server sockets
                 self.udp_server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -148,6 +152,15 @@ class DnsProxy:
         found_working = False
         domain_resolver_generator = self.generate_domain_resolver()
 
+        if os.path.exists("working_resolver_config.json") and not self.skip_working_file:
+            logging.info("Trying already found working resolver from config")
+            with open("working_resolver_config.json", "r") as f:
+                data = json.load(f)
+            resolver = DomainResolver.from_dict(data)
+            self.domain_resolver = resolver
+            self.proxy_mode = self.domain_resolver.dns_mode
+            found_working = resolver.works(message=make_query(self.censored_domain, "A"))
+
         while not found_working:
             # determine next possible resolver
             try:
@@ -170,6 +183,8 @@ class DnsProxy:
                 logging.info(f"{domain_resolver} consistently reachable, keeping!")
                 self.domain_resolver = domain_resolver
                 self.proxy_mode = self.domain_resolver.dns_mode
+                with open("working_resolver_config.json", "w") as f:
+                    json.dump(domain_resolver.to_dict(), f, indent=4)
                 logging.info(f"Finding consistent mode and starting resolvers took {time.time() - self.start_time} seconds in total.")
         return time.time() - self.start_time
 

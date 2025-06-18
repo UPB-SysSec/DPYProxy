@@ -57,9 +57,14 @@ class DnsModule(Module):
                                 default=False,
                                 help='Whether the given IP ranges to compare are block page IPs or not. Default is False.')
 
-        dns_module.add_argument('--dns_add_sni', type=str,
+        dns_module.add_argument('--dns_add_sni', type=bool,
                                 default=True,
                                 help='Whether or not to include the SNI for encrypted DNS modes. Defaults to True.')
+
+        dns_module.add_argument('--dns_skip_working_file', type=bool,
+                                default=False,
+                                help='Whether taking the working resolver from a file should be skipped. Defaults to False.')
+
 
     def extract_parameters(self, args: Namespace):
         self.server_address = NetworkAddress(args.dns_host, args.dns_port)
@@ -72,7 +77,8 @@ class DnsModule(Module):
                               censored_domain=args.dns_censored_domain,
                               compare_ip_ranges=[x for x in args.dns_compare_ip_ranges.split(",")],
                               block_page_ips=args.dns_block_page_ips,
-                              add_sni=args.dns_add_sni)
+                              add_sni=args.dns_add_sni,
+                              skip_working_file=args.dns_skip_working_file)
 
     def start(self):
         self.proxy.start()
