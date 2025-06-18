@@ -12,8 +12,9 @@ class Module(ABC):
     def __init__(self, parser: ArgumentParser):
         self.parser = parser
 
+    @staticmethod
     @abstractmethod
-    def register_parameters(self):
+    def register_parameters(parser: ArgumentParser):
         """
         Registers the module's CLI parameters.
         """

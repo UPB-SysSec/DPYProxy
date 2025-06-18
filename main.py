@@ -1,11 +1,14 @@
 import argparse
 import logging
 import sys
+import threading
 import time
 from argparse import ArgumentParser
 
 from enumerators.Modules import Modules
 from modules.Module import Module
+from modules.dns.DnsModule import DnsModule
+from modules.tls.TlsModule import TlsModule
 
 
 def extract_activated_modules(parser: ArgumentParser) -> list[Module]:
@@ -49,21 +52,30 @@ def main():
     parser = argparse.ArgumentParser(description='Proxy for circumventing DPI-based censorship.',
                                      usage='%(prog)s [options]', add_help=False)
 
+    # parse options of other modules
+    for otherModule in Modules:
+        otherModule.get_class().register_parameters(parser)
+
     activated_modules = extract_activated_modules(parser)
 
-    # parse options of other modules
-    for otherModule in activated_modules:
-        otherModule.register_parameters()
 
-    # TODO: detect when unknown arguments are of module that was not added, or at least tell the possibility
     parsed_args = parser.parse_args()
 
     for otherModule in activated_modules:
         otherModule.extract_parameters(parsed_args)
 
+    # if tls module and DNS module are running provide dns server to tls module
+    dns_module = next((mod for mod in activated_modules if isinstance(mod, DnsModule)), None)
+    tls_module = next((mod for mod in activated_modules if isinstance(mod, TlsModule)), None)
+
+    if dns_module and tls_module:
+        logging.info("DNS Module and TLS module found. Setting DNS server for TLS Module")
+        tls_module.set_dns_server(dns_module.server_address)
+        tls_module.extract_parameters(parsed_args)
+
     # start modules
     for otherModule in activated_modules:
-        otherModule.start()
+        threading.Thread(target=otherModule.start).start()
 
     # TODO: remove busy sleeping
     try:

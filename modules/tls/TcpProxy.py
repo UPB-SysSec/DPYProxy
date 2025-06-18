@@ -19,7 +19,7 @@ class TcpProxy:
                  record_frag: bool = False,
                  tcp_frag: bool = False,
                  frag_size: int = 20,
-                 dot_ip: str = "8.8.4.4",
+                 dns_server: NetworkAddress = None,
                  disabled_modes: list[TcpProxyMode] = None,
                  forward_proxy: NetworkAddress = None,
                  forward_proxy_mode: TcpProxyMode = TcpProxyMode.HTTPS,
@@ -33,7 +33,7 @@ class TcpProxy:
         self.tcp_frag = tcp_frag
         self.frag_size = frag_size
         # whether to use dot for domain resolution
-        self.dot_ip = dot_ip
+        self.dns_server = dns_server
         self.disabled_modes = disabled_modes
         if self.disabled_modes is None:
             self.disabled_modes = []
@@ -54,7 +54,7 @@ class TcpProxy:
             self.record_frag,
             self.tcp_frag,
             self.frag_size,
-            self.dot_ip,
+            self.dns_server,
             self.disabled_modes,
             self.forward_proxy,
             self.forward_proxy_mode,
@@ -70,8 +70,8 @@ class TcpProxy:
         self.server.bind((self.address.host, self.address.port))
         self.server.listen()
         print(f"### Started TCP proxy on {self.address.host}:{self.address.port} ###")
-        if self.dot_ip:
-            logging.debug(f"Using DoT resolver {self.dot_ip}")
+        if self.dns_server:
+            logging.debug(f"Using DNS server {self.dns_server}")
         if self.forward_proxy:
             logging.debug(f"Using forward proxy {self.forward_proxy}")
         while self.continue_processing:
