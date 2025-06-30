@@ -46,7 +46,6 @@ class DnsModule(Module):
 
         dns_module.add_argument('--dns_censored_domain', type=str,
                                 default="www.google.dj",
-                                # TODO: add .txt document with example values for varying countries
                                 help='A domain name censored in your location. Used to determine working circumventions methods. Specify together with --dns_censored_domain_ip')
 
         dns_module.add_argument('--dns_compare_ip_ranges', type=str,

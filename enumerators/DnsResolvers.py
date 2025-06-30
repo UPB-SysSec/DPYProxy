@@ -93,8 +93,6 @@ class DnsResolvers(Enum):
     def __str__(self):
         return f"{self.name} ({self.value}): {self.hostname}"
 
-    # TODO: Adjust default and family
-
     def is_default(self):
         """
         Returns true if we consider the DNS server to be default. DpyProxy favors "default" DNS resolvers in its AUTO

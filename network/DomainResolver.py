@@ -118,8 +118,6 @@ class DomainResolver:
         :param path: the path used in the HTTP URL
         :return: The Dns response by the resolver
         """
-        # TODO: check http support through httpx dependency
-
         # Reused code from dnypython's https function below
 
         url=f"https://{resolver.host}:{resolver.port}{path}"
@@ -206,8 +204,6 @@ class DomainResolver:
         :param path: the path used in the HTTP URL
         :return: The Dns response by the resolver
         """
-        # TODO: check quic support through aioquic dependency
-
         # Reused code from dnypython's _http3 function below
 
         q = message
@@ -259,7 +255,6 @@ class DomainResolver:
         :param add_sni: whether to add SNI
         :return: The Dns response by the resolver
         """
-        # TODO: check quic support through aioquic dependency
         if add_sni:
             return quic(message, where=resolver.host, port=resolver.port, timeout=timeout, server_hostname=hostname, hostname=hostname, verify=True)
         else:

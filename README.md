@@ -203,9 +203,9 @@ functionality of DPYProxy is currently limited. Below, I gathered some potential
 - [x] Socksv4/Sockv5 proxy
 - [x] TLS record fragmentation
 - [x] TCP Fragmentation
+- [x] DNS
 
 ## Todo
 - [ ] HTTP shenanigans
 - [ ] unit tests...
-- [ ] DNS
 - [ ] IPv6
