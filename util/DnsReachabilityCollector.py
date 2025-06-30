@@ -126,6 +126,8 @@ IRAN_BLOCK_PAGES = [
 ]
 
 def main():
+    print(",".join(GOOGLE_RANGES))
+    return
     logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
 
     _det = DnsModeDeterminator(timeout=TIMEOUT,
