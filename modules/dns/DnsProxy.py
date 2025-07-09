@@ -186,6 +186,8 @@ class DnsProxy:
                 with open("working_resolver_config.json", "w") as f:
                     json.dump(domain_resolver.to_dict(), f, indent=4)
                 logging.info(f"Finding consistent mode and starting resolvers took {time.time() - self.start_time} seconds in total.")
+                if not domain_resolver.add_sni and domain_resolver.dns_mode in [DnsProxyMode.DOT, DnsProxyMode.DOH, DnsProxyMode.DOH3, DnsProxyMode.DOQ]:
+                    logging.warning(f"Sending no SNI with an encrypted DNS mode leads to no certificate validation during the TLS handshake. If you would like to avoid this, set dns_add_sni to True.")
         return time.time() - self.start_time
 
 
