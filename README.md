@@ -106,7 +106,7 @@ Standard options:
 
 ## Examples
 
-`python3 main.py --disabled_modules TLS` launched DPYProxy with just the DNS module enabled. The TLS module is disabled and not
+`python3 main.py --disabled_modules TLS` launches DPYProxy with just the DNS module enabled. The TLS module is disabled and not
 used at all. The DNS module starts in its auto mode by default.
 
 `python3 main.py --tls_record_frag --no-tls_tcp_frag` launches DPYProxy with TLS record fragmentation enabled. TCP fragmentation is 
