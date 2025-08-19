@@ -1,11 +1,11 @@
 {
-    "dns_mode": "TCP",
+    "dns_mode": "UDP",
     "resolver": {
-        "host": "77.88.8.1",
+        "host": "77.88.8.3",
         "port": 53
     },
     "timeout": 3,
-    "hostname": "common.dot.dns.yandex.net",
+    "hostname": "family.dot.dns.yandex.net",
     "tcp_frag_size": 20,
     "add_sni": true,
     "path": "/dns-query"

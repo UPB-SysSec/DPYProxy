@@ -12,11 +12,11 @@ separate proxy for IP censorship circumvention.
 # Requirements
 - python3
   - `sudo apt install python3`
-- dnspython (if the dot setting is used)
+- packages
   - `pip3 install -r requirements.txt`
 - docker (if you want to run DPYProxy in a container)
   - https://docs.docker.com/engine/install/
-  - 
+  
 # Usage
 
 ```
@@ -95,6 +95,9 @@ DNS Module:
   --dns_add_sni DNS_ADD_SNI
                         Whether or not to include the SNI for encrypted DNS
                         modes. Defaults to True.
+  --dns_skip_working_file
+                        Whether taking the stored working resolver from a file should be skipped.
+                        Defaults to False.
 
 Standard options:
   -h, --help            Show this help message and exit
@@ -104,84 +107,46 @@ Standard options:
                         are disabled. Hence, all are enabled
 ```
 
-## Settings
-
-### --debug
-Turns on debugging statements.
-
-### --proxy_mode
-DPYProxy proxies based on the first message it receives. It can infer a destination from **HTTP GET** messages,
-**HTTP CONNECT** messages and **TLS ClientHello** messages that contain the **SNI** extension. By default, DPYProxy 
-detects the message type automatically. You can restrict it to a specific type using this argument. Use HTTP for 
-HTTP GET messages, HTTPS for HTTP CONNECT messages and SNI for TLS ClientHello messages.
-
-### --timeout
-The timeout for which to keep open the connections in either direction. If no data is received for the specified time, 
-DPYProxy cancels the socket. In seconds.
-
-### --port
-The port on which DPYProxy listens for incoming connections.
-
-### --record_frag
-Enables TLS record fragmentation. Any received TLS handshake message is fragmented into multiple TLS records. The size 
-can be specified by --frag-size. When run in combination with --tcp-frag, a TLS record is contained in a slightly larger TCP segment
-that accounts for header bytes.
-
-### --tcp_frag
-Enables TCP fragmentation. Any received TCP message is fragmented into multiple TCP segments. The size can be specified
-by --frag-size. When run in combination with --record-frag, a TLS record is contained in a slightly larger TCP segment
-that accounts for header bytes.
-
-### --frag-size
-The size of the fragments in bytes. The default is 20 bytes. Note that a large fragment size can lead to no 
-fragmentation for smaller messages.
-
-### --tls_dns_server_ip
-The IP address of the DNS server to use by the TCP proxy. If not specified, the OS default DNS server is used. This is only relevant if you use the DNS over TLS circumve
-
-### --tls_dns_server_port
-DNS server port for all DNS queries. Only set if a DNS server IP is given. If not given, the default port 53 is used.
-
-### --forward_proxy_...
-You can specify a forward proxy for IP censorship circumvention. DPYProxy will forward any message it receives to the 
-forward proxy instead of the destination. You can specify the address and port of the forward proxy as well as its mode
-of operation. For example, you can specify a forward proxy that only proxies HTTP CONNECT messages. DPYProxy will send 
-the corresponding message to the server. You can also specify whether DPYProxy should resolve the domain before sending
-the HTTP CONNECT message to the forward proxy. This can be helpful if the forward proxy does not support DNS resolution.
-
 ## Examples
 
-`python3 main.py --record_frag --no-tcp_frag` launches DPYProxy with TLS record fragmentation enabled. TCP fragmentation is 
-turned off.
+`python3 main.py --disabled_modules TLS` launched DPYProxy with just the DNS module enabled. The TLS module is disabled and not
+used at all. The DNS module starts in its auto mode by default.
 
-`python3 main.py --no-record_frag --no-tcp_frag --debug` launches DPYProxy without any censorship circumvention techniques but enables debugging.
+`python3 main.py --tls_record_frag --no-tls_tcp_frag` launches DPYProxy with TLS record fragmentation enabled. TCP fragmentation is 
+turned off. The DNS module is also enabled with its default auto mode to determine a working circumvention. Using this circumvention, a
+resolver is started that can be used on the system in general and is used by the TLS module by default.
 
-`python3 main.py --frag_size 100` launches DPYProxy with both TLS record and TCP fragmentation
+`python3 main.py --tls_frag_size 100` launches DPYProxy with both TLS record and TCP fragmentation
 and sets the fragment size to 100 bytes. The TLS record will be of size 100 while the encompassing TCP segments will be
-just large enough to contain the fragmented TLS record.
-
-`python3 main.py --record_frag --dot --dot_resolver 8.8.8.8 --port 443` launches DPYProxy on port 443 and enables TLS record fragmentation. 
-It also enables DNS over TLS to resolve the domain of the destination. For that, it uses Google's DNS server `8.8.8.8`.
+just large enough to contain the fragmented TLS record. The DNS module is also enabled with its default auto mode to determine a working circumvention. Using this circumvention, a
+resolver is started that can be used on the system in general and is used by the TLS module by default.
 
 `python3 main.py --record_frag --forward_proxy_address 192.168.0.1 --forward_proxy_port 8080 --forward_proxy_mode HTTPS 
 --forward_proxy_resolve_address` launches DPYProxy with TLS record fragmentation and a forward proxy. The forward proxy 
 is specified by its address and port. While DPYProxy accepts HTTP GET, HTTP CONNECT and TLS ClientHello messages for 
-proxying, it connects to the forward proxy using HTTP CONNECT.
+proxying, it connects to the forward proxy using HTTP CONNECT. The DNS module is also enabled with its default auto mode to determine a working circumvention. Using this circumvention, a
+resolver is started that can be used on the system in general and is used by the TLS module by default.
 
 ## Testing
 
 Setup DPYProxy using 
 ```sh
-python3 main.py --record_frag --tcp_frag --frag_size 20 --port 4433
+python3 main.py --tls_record_frag --tls_tcp_frag --tls_frag_size 20 --tls_port 4433 --dns_port 5533
 ```
 
-you can test it using curl
+You can test the TLS circumventions using curl
 ```sh
 curl -p -x localhost:4433 https://www.wikipedia.org
 ```
 
-using some kind of capturing tool like wireshark you can inspect the fragmented TLS records and TCP segments.
+Using some kind of capturing tool like Wireshark, you can inspect the fragmented TLS records and TCP segments.
 
+You can test the DNS circumventions using dig
+```sh
+dig wikipedia @127.0.0.1 -p 5533
+```
+
+Using some kind of capturing tool like Wireshark, you can inpect the made DNS requests for the selected circumvention strategy.
 # Docker
 
 You can run DPYProxy in a Docker container. A standard setting is provided in the `docker-compose.yml` file. You can
@@ -191,21 +156,3 @@ Start the container with
 ```sh
 docker-compose up
 ```
-
-# Roadmap
-
-I developed DPYProxy when writing a blogpost in which I circumvented the GFW with TLS record fragmentation. Thus, the 
-functionality of DPYProxy is currently limited. Below, I gathered some potential avenues for the future.
-
-## Implemented
-- [x] HTTP Connect Proxy
-- [x] SNI Proxy
-- [x] Socksv4/Sockv5 proxy
-- [x] TLS record fragmentation
-- [x] TCP Fragmentation
-- [x] DNS
-
-## Todo
-- [ ] HTTP shenanigans
-- [ ] unit tests...
-- [ ] IPv6

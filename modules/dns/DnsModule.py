@@ -62,7 +62,7 @@ class DnsModule(Module):
 
         dns_module.add_argument('--dns_skip_working_file', type=bool,
                                 default=False,
-                                help='Whether taking the working resolver from a file should be skipped. Defaults to False.')
+                                help='Whether taking the stored working resolver from a file should be skipped. Defaults to False.')
 
 
     def extract_parameters(self, args: Namespace):
