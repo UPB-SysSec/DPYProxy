@@ -5,6 +5,7 @@ services:
     ports:
       - "127.0.0.1:4433:4433"
       - "127.0.0.1:5533:5533"
+      - "127.0.0.1:5533:5533/udp"
     build:
       context: .
       dockerfile: Dockerfile
