@@ -1,13 +1,10 @@
-# DPYProxy
-DPYProxy is a python proxy that implements DPI evasion mechanisms. Currently, TLS record fragmentation and TCP
-Fragmentation are implemented. All DPI evasion mechanisms can be enabled separately.
+# DPYProxy-DNS
+We extended DPYProxy with modularization and a new DNS module. The already existing code for TLS circumventions was moved to the TLS module.
 
-You can run DPYProxy locally or on a separate machine. It functions like an HTTP CONNECT proxy. I.e., you can specify
-it as your Firefox/Chrome/System Proxy. Socksv4/Socksv5 support is planned in the future.
+You can run DPYProxy(-DNS) locally or on a separate machine. It is a DNS/TLS proxy, dependent on the running modules. Both can run at
+the same time and in this case the TLS module uses the DNS proxy internally by default.
 
-In a typical setup, DPYProxy runs locally replacing your previous proxy in your browser or system setup. You can specify
-your previous proxy as a forward proxy for DPYProxy. This can be helpful if you need DPYProxy for DPI evasion and a
-separate proxy for IP censorship circumvention.
+In the following, we detail the requirements, usage, and examples.
 
 # Requirements
 - python3
@@ -152,7 +149,7 @@ Using some kind of capturing tool like Wireshark, you can inpect the made DNS re
 You can run DPYProxy in a Docker container. A standard setting is provided in the `docker-compose.yml` file. You can
 also build the image yourself using the provided `Dockerfile` or change the parameters in the `docker-compose.yml` file.
 
-Start the container with 
+Start the container with: 
 ```sh
 docker-compose up
 ```
