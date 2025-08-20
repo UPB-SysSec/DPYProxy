@@ -1,19 +1,17 @@
 import logging
 import socket
 
-from dns.message import make_query
-
 from enumerators.TcpProxyMode import TcpProxyMode
 from exception.ParserException import ParserException
 from network.DomainResolver import DomainResolver
-from network.tcp.Forwarder import Forwarder
 from network.NetworkAddress import NetworkAddress
-from network.tcp.WrappedTcpSocket import WrappedTcpSocket
 from network.protocols.Dns import Dns
 from network.protocols.Http import Http
 from network.protocols.Socksv4 import Socksv4
 from network.protocols.Socksv5 import Socksv5
 from network.protocols.Tls import Tls
+from network.tcp.Forwarder import Forwarder
+from network.tcp.WrappedTcpSocket import WrappedTcpSocket
 from util.Util import is_valid_ipv4_address
 from util.constants import STANDARD_SOCKET_RECEIVE_SIZE, TLS_1_0_HEADER, TLS_1_2_HEADER, \
     TLS_1_1_HEADER, SOCKSv4_HEADER, SOCKSv5_HEADER

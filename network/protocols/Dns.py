@@ -1,10 +1,9 @@
+import dns
 from dns.message import Message, make_response
 
 from exception.DnsException import DnsException
 from network.DomainResolver import DomainResolver
-from network.WrappedSocket import WrappedSocket
 
-import dns
 
 class Dns:
     """

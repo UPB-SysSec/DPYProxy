@@ -9,7 +9,6 @@ from dns.exception import Timeout
 from dns.message import Message
 from dns.query import tls, tcp, quic, udp, send_udp, receive_udp, _destination_and_source, _HTTPTransport, BadResponse, \
     _compute_times, _remaining, _check_status
-from dns.quic._common import UnexpectedEOF
 
 from enumerators.DnsProxyMode import DnsProxyMode
 from exception.DnsException import DnsException

@@ -3,7 +3,6 @@ from network.NetworkAddress import NetworkAddress
 from network.tcp.WrappedTcpSocket import WrappedTcpSocket
 
 
-# TODO: HTTP/2 support
 class Http:
     """
     Implements methods to parse HTTP messages.

@@ -1,11 +1,11 @@
 {
-    "dns_mode": "UDP",
+    "dns_mode": "TCP_FRAG",
     "resolver": {
-        "host": "77.88.8.3",
+        "host": "208.67.222.123",
         "port": 53
     },
     "timeout": 3,
-    "hostname": "family.dot.dns.yandex.net",
+    "hostname": "familyshield.opendns.com",
     "tcp_frag_size": 20,
     "add_sni": true,
     "path": "/dns-query"

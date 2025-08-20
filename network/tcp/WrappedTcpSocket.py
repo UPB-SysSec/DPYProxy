@@ -1,9 +1,6 @@
 import socket
-from time import time
 
-from exception.ParserException import ParserException
 from network.WrappedSocket import WrappedSocket
-from util.constants import STANDARD_SOCKET_RECEIVE_SIZE
 
 
 class WrappedTcpSocket(WrappedSocket):

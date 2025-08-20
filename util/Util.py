@@ -2,9 +2,7 @@ import logging
 import socket
 
 import dns
-from dns.rdataclass import RdataClass
-from dns.rdatatype import RdataType, CNAME
-from dns.rrset import RRset
+from dns.rdatatype import RdataType
 
 
 def is_valid_ipv4_address(ip_address: str) -> bool:

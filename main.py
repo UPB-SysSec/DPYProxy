@@ -77,7 +77,6 @@ def main():
     for otherModule in activated_modules:
         threading.Thread(target=otherModule.start).start()
 
-    # TODO: remove busy sleeping
     try:
         while True:
             time.sleep(1000)

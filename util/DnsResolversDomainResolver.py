@@ -1,10 +1,9 @@
-from ipaddress import IPv4Address
+import os
+# hack to add parent to pythonpath
+import sys
 
 from dns.message import make_query
 
-# hack to add parent to pythonpath
-import sys
-import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 from enumerators.DnsProxyMode import DnsProxyMode

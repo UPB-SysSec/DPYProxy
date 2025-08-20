@@ -1,11 +1,10 @@
 import logging
-import threading
 from argparse import BooleanOptionalAction, Namespace, ArgumentParser
 
 from enumerators.TcpProxyMode import TcpProxyMode
 from modules.Module import Module
-from network.NetworkAddress import NetworkAddress
 from modules.tls.TcpProxy import TcpProxy
+from network.NetworkAddress import NetworkAddress
 
 
 class TlsModule(Module):
