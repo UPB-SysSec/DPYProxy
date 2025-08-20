@@ -1,10 +1,13 @@
 # DPYProxy-DNS
-We extended DPYProxy with modularization and a new DNS module. The already existing code for TLS circumventions was moved to the TLS module.
 
-You can run DPYProxy(-DNS) locally or on a separate machine. It is a DNS/TLS proxy, dependent on the running modules. Both can run at
-the same time and in this case the TLS module uses the DNS proxy internally by default.
+DPYProxy-DNS is an extension of DPYProxy introducing DNS censorship circumvention methods.
 
-In the following, we detail the requirements, usage, and examples.
+The original repository was developed by the System Security Group at Paderborn University and is located at https://github.com/UPB-SysSec/DPYProxy.
+Their code for TLS censorship circumvention is retained in this repository. 
+
+We extended DPYProxy with modularization and a new DNS module. The already existing code for TLS circumventions was moved to the TLS module. The old TLS and the new DNS censorship circumvention modules can be run in parallel. In this case, the TLS module uses the DNS module by default to resolve domains.
+
+We want to thank the original authors for their work and hope to contribute our changes back to the original repository as soon as possible.
 
 # Requirements
 - python3 (if you want to run DPYPRoxy with Python)
