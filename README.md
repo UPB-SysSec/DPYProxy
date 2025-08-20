@@ -7,13 +7,43 @@ the same time and in this case the TLS module uses the DNS proxy internally by d
 In the following, we detail the requirements, usage, and examples.
 
 # Requirements
-- python3
+- python3 (if you want to run DPYPRoxy with Python)
   - `sudo apt install python3`
-- packages
   - `pip3 install -r requirements.txt`
 - docker (if you want to run DPYProxy in a container)
   - https://docs.docker.com/engine/install/
   
+# Quick Start
+Start DPYProxy-DNS with Docker: 
+```sh
+docker-compose up
+```
+Alternatively, start DPYProxy-DNS with Python:
+```sh
+python3 main.py --tls_record_frag --tls_tcp_frag --tls_frag_size 20 --tls_port 4433 --dns_port 5533
+```
+After automatically determining a circumvention method, the expected output looks like this:
+```
+INFO:root:DNS Module and TLS module found. Setting DNS server for TLS Module
+INFO:root:Determining working circumvention method / resolver!
+### Started TCP proxy on localhost:4433 ###
+INFO:root:Found working circumvention method / resolver UDP - 1.0.0.3:53! Checking if consistently reachable!
+INFO:root:UDP - 1.0.0.3:53 consistently reachable, keeping!
+INFO:root:Finding consistent mode and starting resolvers took 0.0792999267578125 seconds in total.
+### Started UDP DNS server on 127.0.0.1:5533 ###
+### Started TCP DNS server on 127.0.0.1:5533 ###
+```
+
+DPYProxy now resolves all DNS requests to port 5533. 
+You can send a DNS request to the DNS server using `dig`:
+```sh
+dig wikipedia.org @127.0.0.1 -p 5533
+```
+
+You can also configure the DNS resolver `127.0.0.1:5533` in any application that supports custom DNS resolvers, e.g., in your browser or system settings.
+
+Detailed usage of DPYPRoxy-DNS and the original TLS module can be found below.
+
 # Usage
 
 ```
@@ -143,7 +173,7 @@ You can test the DNS circumventions using dig
 dig wikipedia @127.0.0.1 -p 5533
 ```
 
-Using some kind of capturing tool like Wireshark, you can inpect the made DNS requests for the selected circumvention strategy.
+Using some kind of capturing tool like Wireshark, you can inspect the made DNS requests for the selected circumvention strategy.
 # Docker
 
 You can run DPYProxy in a Docker container. A standard setting is provided in the `docker-compose.yml` file. You can
