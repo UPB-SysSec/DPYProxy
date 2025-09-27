@@ -1,6 +1,7 @@
 import logging
 import string
 import sys
+import os
 
 import argparse
 
@@ -107,6 +108,19 @@ def initialize_parser():
                                help='''Whether to resolve domains before including them in the HTTP CONNECT request to the
                         second proxy''')
 
+    forward_proxy.add_argument('--forward_proxy_username', type=str,
+                               default=None,
+                               help='Username for the forward proxy authentication (HTTP Basic / SOCKS5)')
+
+    forward_proxy.add_argument('--forward_proxy_password', type=str,
+                               default=None,
+                               help='Password for the forward proxy authentication (HTTP Basic / SOCKS5)')
+
+    forward_proxy.add_argument('--forward_proxy_socks5_auth', type=str,
+                               choices=['auto', 'no_auth', 'userpass'],
+                               default='auto',
+                               help="SOCKS5 auth policy when using forward proxy: 'auto', 'no_auth', or 'userpass'")
+
     return parser.parse_args()
 
 
@@ -122,6 +136,19 @@ def main():
     else:
         logging.basicConfig(stream=sys.stderr, level=logging.INFO)
 
+    username = args.forward_proxy_username or os.getenv("FORWARD_PROXY_USERNAME")
+    password = args.forward_proxy_password or os.getenv("FORWARD_PROXY_PASSWORD")
+
+    if args.forward_proxy_socks5_auth == 'userpass' and (username is None or password is None):
+        print("--forward_proxy_socks5_auth=userpass requires --forward_proxy_username and --forward_proxy_password", file=sys.stderr)
+        sys.exit(2)
+
+    if args.forward_proxy_mode.name == "SOCKSv4" and (username or password):
+        print("[warn] Credentials are ignored for SOCKS4 forward proxy", file=sys.stderr)
+
+    if args.forward_proxy_socks5_auth == 'no_auth' and (username or password):
+        print("[warn] Credentials provided but --forward_proxy_socks5_auth=no_auth; creds will be ignored", file=sys.stderr)
+
     server_address = NetworkAddress(args.host, args.port)
     forward_proxy = None
     if args.forward_proxy_port is not None:
@@ -133,7 +160,8 @@ def main():
 
     proxy = Proxy(server_address, args.timeout, args.record_header_version, args.record_frag, args.tcp_frag,
                   args.frag_size, args.dot_resolver, args.disabled_modes, forward_proxy, args.forward_proxy_mode,
-                  args.forward_proxy_resolve_address)
+                  args.forward_proxy_resolve_address, username, password,
+                  args.forward_proxy_socks5_auth)
     proxy.start()
 
 

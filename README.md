@@ -56,6 +56,12 @@ Forward proxy options:
                         The proxy type of the forward proxy
   --forward_proxy_resolve_address, --no-forward_proxy_resolve_address
                         Whether to resolve domains before including them in the HTTP CONNECT request to the second proxy (default: False)
+  --forward_proxy_username FORWARD_PROXY_USERNAME
+                        Username for forward proxy authentication (HTTP Basic/SOCKS5). Can also be set via FORWARD_PROXY_USERNAME env var
+  --forward_proxy_password FORWARD_PROXY_PASSWORD
+                        Password for forward proxy authentication (HTTP Basic/SOCKS5). Can also be set via FORWARD_PROXY_PASSWORD env var  
+  --forward_proxy_socks5_auth {auto,no_auth,userpass}
+                        SOCKS5 auth policy: 'auto' (try userpass then no_auth), 'no_auth', or 'userpass' (default: auto)
 ```
 
 ## Settings
@@ -108,6 +114,20 @@ of operation. For example, you can specify a forward proxy that only proxies HTT
 the corresponding message to the server. You can also specify whether DPYProxy should resolve the domain before sending
 the HTTP CONNECT message to the forward proxy. This can be helpful if the forward proxy does not support DNS resolution.
 
+### --forward_proxy_username / --forward_proxy_password
+Credentials for authenticating with the forward proxy. Supports:
+- **HTTP/HTTPS forward proxies**: Uses HTTP Basic Authentication (RFC 7235)  
+- **SOCKS5 forward proxies**: Uses Username/Password Authentication (RFC 1929)
+- **SOCKS4 proxies**: Authentication not supported (credentials ignored)
+
+For security, credentials can be provided via environment variables `FORWARD_PROXY_USERNAME` and `FORWARD_PROXY_PASSWORD` instead of CLI flags.
+
+### --forward_proxy_socks5_auth
+Controls SOCKS5 authentication behavior:
+- **auto** (default): If credentials provided, try username/password auth first, fallback to no-auth if server doesn't support it
+- **no_auth**: Force no authentication (credentials ignored if provided)  
+- **userpass**: Force username/password authentication (requires credentials)
+
 ## Examples
 
 `python3 main.py --record_frag --no-tcp_frag` launches DPYProxy with TLS record fragmentation enabled. TCP fragmentation is 
@@ -126,6 +146,14 @@ It also enables DNS over TLS to resolve the domain of the destination. For that,
 --forward_proxy_resolve_address` launches DPYProxy with TLS record fragmentation and a forward proxy. The forward proxy 
 is specified by its address and port. While DPYProxy accepts HTTP GET, HTTP CONNECT and TLS ClientHello messages for 
 proxying, it connects to the forward proxy using HTTP CONNECT.
+
+`python3 main.py --forward_proxy_host proxy.example.com --forward_proxy_port 3128 --forward_proxy_mode HTTPS 
+--forward_proxy_username myuser --forward_proxy_password mypass` launches DPYProxy with HTTP Basic authentication 
+to the forward proxy.
+
+`FORWARD_PROXY_USERNAME=user FORWARD_PROXY_PASSWORD=pass python3 main.py --forward_proxy_host socks.example.com 
+--forward_proxy_port 1080 --forward_proxy_mode SOCKSv5 --forward_proxy_socks5_auth userpass` launches DPYProxy 
+with SOCKS5 username/password authentication using environment variables for security.
 
 ## Testing
 

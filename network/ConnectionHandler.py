@@ -1,5 +1,6 @@
 import logging
 import socket
+from typing import Optional
 
 from enumerators.ProxyMode import ProxyMode
 from exception.ParserException import ParserException
@@ -29,11 +30,14 @@ class ConnectionHandler:
                  record_frag: bool,
                  tcp_frag: bool,
                  frag_size: int,
-                 dot_ip: str,
+                 dot_ip: Optional[str],
                  disabled_modes: list[ProxyMode],
-                 forward_proxy: NetworkAddress,
+                 forward_proxy: Optional[NetworkAddress],
                  forward_proxy_mode: ProxyMode,
-                 forward_proxy_resolve_address: bool):
+                 forward_proxy_resolve_address: bool,
+                 forward_proxy_username: Optional[str] = None,
+                 forward_proxy_password: Optional[str] = None,
+                 forward_proxy_socks5_auth: str = 'auto'):
         self.connection_socket = connection_socket
         self.address = address
         self.proxy_mode = None
@@ -47,6 +51,9 @@ class ConnectionHandler:
         self.forward_proxy = forward_proxy
         self.forward_proxy_mode = forward_proxy_mode
         self.forward_proxy_resolve_address = forward_proxy_resolve_address
+        self.forward_proxy_username = forward_proxy_username
+        self.forward_proxy_password = forward_proxy_password
+        self.forward_proxy_socks5_auth = forward_proxy_socks5_auth
 
     def handle(self):
         """
@@ -183,35 +190,56 @@ class ConnectionHandler:
         try:
             # send proxy messages if necessary
             if self.forward_proxy_mode == ProxyMode.HTTPS:
-                server_socket.send(Http.connect_message(final_server_address, http_version))
+                proxy_auth_header = None
+                if self.forward_proxy_username is not None and self.forward_proxy_password is not None:
+                    proxy_auth_header = Http.proxy_authorization_basic(self.forward_proxy_username, self.forward_proxy_password)
+                server_socket.send(Http.connect_message_with_auth(final_server_address, http_version, proxy_auth_header))
                 self.debug(f"Sent HTTP CONNECT to forward proxy")
-                # receive HTTP 200 OK
-                answer = server_socket.recv(STANDARD_SOCKET_RECEIVE_SIZE)
-                if not answer.upper().startswith(Http.http_200_ok(http_version)):
-                    raise ParserException(f"Forward proxy rejected the connection with {answer}")
+                # receive HTTP response and check status code
+                version, status_code, reason = Http.read_http_response_status(server_socket)
+                if status_code != 200:
+                    if status_code == 407:
+                        raise ParserException("Forward proxy authentication failed (HTTP 407). Check credentials or proxy auth scheme.")
+                    raise ParserException(f"Forward proxy CONNECT failed: {version} {status_code} {reason}")
 
-            elif self.forward_proxy == ProxyMode.SOCKSv4:
+            elif self.forward_proxy_mode == ProxyMode.SOCKSv4:
                 server_socket.send(Socksv4.socks4_request(final_server_address))
                 self.debug(f"Sent SOCKSv4 to forward proxy")
                 # receive SOCKSv4 OK
                 answer = server_socket.recv(STANDARD_SOCKET_RECEIVE_SIZE)
-                if not answer.upper().startswith(Socksv4.socks4_ok()) and len(answer) != 8:
+                if not answer.startswith(Socksv4.socks4_ok()) or len(answer) != 8:
                     raise ParserException(f"Forward proxy rejected the connection with {answer}")
 
-            elif self.forward_proxy == ProxyMode.SOCKSv5:
-                server_socket.send(Socksv5.socks5_auth_methods())
+            elif self.forward_proxy_mode == ProxyMode.SOCKSv5:
+                server_socket.send(Socksv5.socks5_auth_methods(
+                    self.forward_proxy_username,
+                    self.forward_proxy_password,
+                    self.forward_proxy_socks5_auth
+                ))
                 self.debug("Sent SOCKSv5 auth methods")
                 answer = server_socket.recv(2)
-                if answer == b'\x05\xFF':
-                    raise ParserException("Forward proxy does not support no auth")
-                if answer != b'\x05\x00':
-                    raise ParserException(f"Forward proxy rejected the connection with {answer}")
+                if len(answer) != 2 or answer[0] != 0x05:
+                    raise ParserException(f"Invalid SOCKSv5 method selection response: {answer}")
+                method = answer[1:2]
+                if method == b'\xFF':
+                    raise ParserException("Forward proxy did not accept any auth method")
+                if method == Socksv5.USERPASS:
+                    if self.forward_proxy_username is None or self.forward_proxy_password is None:
+                        raise ParserException("Forward proxy requires username/password but none provided")
+                    server_socket.send(Socksv5.socks5_auth_username_password(self.forward_proxy_username, self.forward_proxy_password))
+                    auth_answer = server_socket.recv(2)
+                    if len(auth_answer) != 2 or auth_answer[0] != 0x01 or auth_answer[1] != 0x00:
+                        raise ParserException(f"SOCKSv5 username/password authentication failed: {auth_answer}")
+                elif method == Socksv5.NO_AUTH:
+                    pass
+                else:
+                    raise ParserException(f"Unsupported SOCKSv5 method selected by server: {method}")
                 server_socket.send(Socksv5.socks5_request(final_server_address))
                 self.debug(f"Sent SOCKSv5 to forward proxy")
                 # receive SOCKSv5 OK
                 answer = server_socket.recv(STANDARD_SOCKET_RECEIVE_SIZE)
-                if not answer.upper().startswith(Socksv5.socks5_ok(server_socket)):
-                    self.debug(f"Forward proxy rejected the connection with {answer}")
+                if len(answer) < 5 or answer[0] != 0x05 or answer[1] != 0x00:
+                    raise ParserException(f"Forward proxy rejected the SOCKSv5 CONNECT with {answer}")
         except:
             self.debug("Could not send proxy message")
             self.connection_socket.try_close()

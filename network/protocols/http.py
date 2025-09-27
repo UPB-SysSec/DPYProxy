@@ -1,6 +1,8 @@
 from exception.ParserException import ParserException
 from network.NetworkAddress import NetworkAddress
 from network.WrappedSocket import WrappedSocket
+import base64
+from typing import Optional
 
 
 # TODO: HTTP/2 support
@@ -88,4 +90,43 @@ class Http:
 
     @staticmethod
     def http_200_ok(version: str) -> bytes:
-        return f'{version} 200 OK\n\n'.encode("ASCII")
+        return f'{version} 200 OK\r\n\r\n'.encode("ASCII")
+
+    @staticmethod
+    def proxy_authorization_basic(username: str, password: str) -> str:
+        token = base64.b64encode(f"{username}:{password}".encode('utf-8')).decode('ascii')
+        return f"Basic {token}"
+
+    @staticmethod
+    def connect_message_with_auth(server_address: NetworkAddress, version: str, proxy_auth_header: Optional[str]) -> bytes:
+        host_ascii = server_address.host.encode("idna").decode("ascii")
+        headers = [
+            f'CONNECT {host_ascii}:{server_address.port} {version}',
+            f'Host: {host_ascii}:{server_address.port}',
+            'Proxy-Connection: Keep-Alive',
+            'Connection: keep-alive'
+        ]
+        if proxy_auth_header:
+            headers.append(f'Proxy-Authorization: {proxy_auth_header}')
+        return ("\r\n".join(headers) + "\r\n\r\n").encode('ASCII')
+
+    @staticmethod
+    def read_http_response_status(wrapped_socket: WrappedSocket) -> (str, int, str):
+        try:
+            message = wrapped_socket.read_until([b'\r\n\r\n', b'\n\n'], 16384, False).decode('ASCII', errors='ignore')
+        except Exception as e:
+            raise ParserException(f"Could not read HTTP response: {e}")
+        if "\r\n" in message:
+            first_line = message.split("\r\n")[0]
+        else:
+            first_line = message.split("\n")[0]
+        parts = first_line.split(" ", 2)
+        if len(parts) < 2 or not parts[0].upper().startswith('HTTP/'):
+            raise ParserException("Not a valid HTTP response status line")
+        version = parts[0]
+        try:
+            status_code = int(parts[1])
+        except Exception:
+            raise ParserException("HTTP status code not an integer")
+        reason = parts[2] if len(parts) > 2 else ''
+        return version, status_code, reason
