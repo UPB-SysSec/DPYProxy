@@ -5,7 +5,6 @@ import threading
 
 from enumerators.TcpProxyMode import TcpProxyMode
 from enumerators.TlsVersion import TlsVersion
-from network.ConnectionHandler import ConnectionHandler
 from network.NetworkAddress import NetworkAddress
 from network.tcp.TcpConnectionHandler import TcpConnectionHandler
 from network.tcp.WrappedTcpSocket import WrappedTcpSocket

@@ -1,13 +1,33 @@
 # DPYProxy
 DPYProxy is a python proxy that implements DPI evasion mechanisms. To circumvent TLS censorship, TLS record fragmentation and TCP
-segmentation are implemented. To circumvent DNS-censorship, DPYProxy uses encrypted DNS and TCP segmentation. All DPI evasion mechanisms can be enabled separately.
+segmentation are implemented. To circumvent DNS censorship, DPYProxy uses encrypted DNS and TCP segmentation. All DPI evasion mechanisms can be enabled separately.
 
-You can run DPYProxy locally or on a separate machine. It functions like an HTTP CONNECT proxy. I.e., you can specify
-it as your Firefox/Chrome/System Proxy. Socksv4/Socksv5 support is planned in the future.
+DPYProxy comes with a TLS and DNS module circumventing TLS and DNS censorship respectively. Both modules are enabled by default:
+
+
+### DNS Module
+You can run the DNS module of DPYProxy locally or on a separate machine. It functions as a DNS resolver that circumvents
+DNS censorship. In a typical setup, DPYProxy runs locally replacing your previous DNS resolver in your system setup.
+
+The DNS module automatically determines a working circumvention method and DNS resolver. You can also specify a 
+circumvention method and resolver manually (see Usage). 
+
+The DNS module saves working circumvention methods and resolvers to a file `working_resolvers.json`. This file is loaded
+on startup to speed up the determination of a working circumvention method. You can force re-determination using the 
+`--dns_skip_working_file` flag.
+
+### TLS Module
+You can run the TLS Module of DPYProxy locally or on a separate machine. It functions like an HTTP CONNECT/SOCKSv4/SOCKSv5 proxy. I.e., you can specify
+it as your Firefox/Chrome/System Proxy.
 
 In a typical setup, DPYProxy runs locally replacing your previous proxy in your browser or system setup. You can specify
 your previous proxy as a forward proxy for DPYProxy. This can be helpful if you need DPYProxy for DPI evasion and a
 separate proxy for IP censorship circumvention.
+
+The TLS module does not automatically determine a working circumvention method. You need to specify the circumvention 
+method manually (see Usage). However, by default, the TLS module uses the DNS module to resolve DNS queries. 
+Thus, if you run both modules, the DNS module automatically determines a working circumvention method for DNS queries 
+used by the TLS module.
 
 # Requirements
 - python3 (if you want to run DPYPRoxy with Python)
@@ -21,7 +41,7 @@ Start DPYProxy with Docker:
 ```sh
 docker-compose up
 ```
-Alternatively, start DPYProxy-DNS with Python:
+Alternatively, start DPYProxy with Python:
 ```sh
 python3 main.py --tls_record_frag --tls_tcp_frag --tls_frag_size 20 --tls_port 4433 --dns_port 5533
 ```
@@ -44,6 +64,11 @@ dig wikipedia.org @127.0.0.1 -p 5533
 ```
 
 You can also configure the DNS resolver `127.0.0.1:5533` in any application that supports custom DNS resolvers, e.g., in your browser or system settings.
+
+You can test the TLS circumventions using curl
+```sh
+curl -p -x localhost:4433 https://www.wikipedia.org
+```
 
 Detailed usage of DPYPRoxy-DNS and the original TLS module can be found below.
 
@@ -175,7 +200,7 @@ Using some kind of capturing tool like Wireshark, you can inspect the fragmented
 
 You can test the DNS circumventions using dig
 ```sh
-dig wikipedia @127.0.0.1 -p 5533
+dig wikipedia.org @127.0.0.1 -p 5533
 ```
 
 Using some kind of capturing tool like Wireshark, you can inspect the made DNS requests for the selected circumvention strategy.

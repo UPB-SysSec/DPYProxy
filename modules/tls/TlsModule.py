@@ -1,7 +1,9 @@
 import logging
+import string
 from argparse import BooleanOptionalAction, Namespace, ArgumentParser
 
 from enumerators.TcpProxyMode import TcpProxyMode
+from enumerators.TlsVersion import TlsVersion
 from modules.Module import Module
 from modules.tls.TcpProxy import TcpProxy
 from network.NetworkAddress import NetworkAddress
@@ -25,6 +27,16 @@ class TlsModule(Module):
         def list_of_modes(arg):
             return list(map(lambda x: TcpProxyMode(x), arg.split(",")))
 
+        def record_header_version(arg):
+            try:
+                return TlsVersion.__getitem__(arg).value
+            except:
+                if len(arg) == 4 and all(c in string.hexdigits for c in arg):
+                    return arg
+                else:
+                    logging.error(f"{arg} not a predefined TLS version, not 2 bytes long or contains non-hex characters.")
+                    exit()
+
         tls_module = parser.add_argument_group('TLS Module')
 
         tls_module.add_argument('--tls_disabled_modes', type=list_of_modes,
@@ -43,6 +55,12 @@ class TlsModule(Module):
         tls_module.add_argument('--tls_port', type=int,
                              default=4433,
                              help='Port the proxy server runs on')
+
+        tls_module.add_argument('--tls_record_version', type=record_header_version,
+                                    default=TlsVersion.DEFAULT.name,
+                                    help=f'Overwrites the TLS version in the TLS record with the given bytes. Pre-defined '
+                                         f'values {[x.name for x in TlsVersion]} or 2 byte long values such as 0303 or '
+                                         f'FFFF can be provided.', )
 
 
         tls_module.add_argument('--tls_record_frag', type=bool,
@@ -100,7 +118,7 @@ class TlsModule(Module):
             logging.debug("Forward proxy modes HTTP and SNI only usable if proxy mode is HTTP or SNI respectively.")
             exit()
 
-        self.proxy = TcpProxy(server_address, args.tls_timeout, args.tls_record_frag, args.tls_tcp_frag, args.tls_frag_size,
+        self.proxy = TcpProxy(server_address, args.tls_timeout, args.tls_record_version, args.tls_record_frag, args.tls_tcp_frag, args.tls_frag_size,
                               self.dns_server, args.tls_disabled_modes, forward_proxy, args.tls_forward_proxy_mode,
                               args.tls_forward_proxy_resolve_address)
 
