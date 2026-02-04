@@ -4,6 +4,8 @@ import socket
 import threading
 
 from enumerators.TcpProxyMode import TcpProxyMode
+from enumerators.TlsVersion import TlsVersion
+from network.ConnectionHandler import ConnectionHandler
 from network.NetworkAddress import NetworkAddress
 from network.tcp.TcpConnectionHandler import TcpConnectionHandler
 from network.tcp.WrappedTcpSocket import WrappedTcpSocket
@@ -13,9 +15,9 @@ class TcpProxy:
     """
     Proxy server
     """
-
     def __init__(self, address: NetworkAddress,
                  timeout: int = 120,
+                 record_version: str = TlsVersion.DEFAULT.value,
                  record_frag: bool = False,
                  tcp_frag: bool = False,
                  frag_size: int = 20,
@@ -28,6 +30,8 @@ class TcpProxy:
         self.timeout = timeout
         # own port
         self.address = address
+        # record header version settings
+        self.record_version = record_version
         # record fragmentation settings
         self.record_frag = record_frag
         self.tcp_frag = tcp_frag
@@ -51,6 +55,7 @@ class TcpProxy:
             client_socket,
             address,
             self.timeout,
+            self.record_version,
             self.record_frag,
             self.tcp_frag,
             self.frag_size,

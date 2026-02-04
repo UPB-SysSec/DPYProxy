@@ -26,6 +26,7 @@ class TcpConnectionHandler:
                  connection_socket: WrappedTcpSocket,
                  address: NetworkAddress,
                  timeout: int,
+                 record_version: str,
                  record_frag: bool,
                  tcp_frag: bool,
                  frag_size: int,
@@ -39,6 +40,7 @@ class TcpConnectionHandler:
         self.proxy_mode = None
         self.timeout = timeout
         self.record_frag = record_frag
+        self.record_version = record_version
         self.tcp_frag = tcp_frag
         self.frag_size = frag_size
         self.dns_server = dns_server
@@ -106,7 +108,8 @@ class TcpConnectionHandler:
 
         # start proxying
         Forwarder(self.connection_socket, self.address.__str__(), server_socket,
-                  f"{target_address[0]}:{target_address[1]}", self.record_frag, self.frag_size).start()
+                  f"{target_address[0]}:{target_address[1]}", self.record_frag, self.record_version,
+                  self.frag_size).start()
 
     def get_proxy_mode(self) -> TcpProxyMode:
         """

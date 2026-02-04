@@ -1,13 +1,13 @@
-# DPYProxy-DNS
+# DPYProxy
+DPYProxy is a python proxy that implements DPI evasion mechanisms. To circumvent TLS censorship, TLS record fragmentation and TCP
+segmentation are implemented. To circumvent DNS-censorship, DPYProxy uses encrypted DNS and TCP segmentation. All DPI evasion mechanisms can be enabled separately.
 
-DPYProxy-DNS is an extension of DPYProxy introducing DNS censorship circumvention methods.
+You can run DPYProxy locally or on a separate machine. It functions like an HTTP CONNECT proxy. I.e., you can specify
+it as your Firefox/Chrome/System Proxy. Socksv4/Socksv5 support is planned in the future.
 
-The original repository was developed by the System Security Group at Paderborn University and is located at https://github.com/UPB-SysSec/DPYProxy.
-Their code for TLS censorship circumvention is retained in this repository. 
-
-We extended DPYProxy with modularization and a new DNS module. The already existing code for TLS circumventions was moved to the TLS module. The old TLS and the new DNS censorship circumvention modules can be run in parallel. In this case, the TLS module uses the DNS module by default to resolve domains.
-
-We want to thank the original authors for their work and hope to contribute our changes back to the original repository as soon as possible.
+In a typical setup, DPYProxy runs locally replacing your previous proxy in your browser or system setup. You can specify
+your previous proxy as a forward proxy for DPYProxy. This can be helpful if you need DPYProxy for DPI evasion and a
+separate proxy for IP censorship circumvention.
 
 # Requirements
 - python3 (if you want to run DPYPRoxy with Python)
@@ -17,7 +17,7 @@ We want to thank the original authors for their work and hope to contribute our 
   - https://docs.docker.com/engine/install/
   
 # Quick Start
-Start DPYProxy-DNS with Docker: 
+Start DPYProxy with Docker: 
 ```sh
 docker-compose up
 ```
@@ -62,6 +62,8 @@ TLS Module:
                         Connection timeout in seconds
   --tls_host TLS_HOST   Address the proxy server runs on
   --tls_port TLS_PORT   Port the proxy server runs on
+  --record_header_version RECORD_HEADER_VERSION
+                        Overwrites the TLS version in the TLS record with the given bytes. Pre-defined values ['DEFAULT', 'TLS10', 'TLS11', 'TLS12', 'TLS13_DRAFT_28', 'TLS13', 'SSL3', 'INVALID_SMALLER', 'INVALID_BIGGER'] or 2 byte long values such as 0303 or FFFF can be provided.
   --tls_record_frag, --no-tls_record_frag
                         Whether to use record fragmentation to forwarded TLS
                         handshake messages (default: True)
@@ -186,3 +188,21 @@ Start the container with:
 ```sh
 docker-compose up
 ```
+
+# Roadmap
+
+We developed DPYProxy when writing a blogpost in which we circumvented the GFW with TLS record fragmentation. Thus, the 
+functionality of DPYProxy is currently limited. Below, I gathered some potential avenues for the future.
+
+## Implemented
+- [x] HTTP Connect Proxy
+- [x] SNI Proxy
+- [x] DNS Resolver
+- [x] Socksv4/Sockv5 proxy
+- [x] TLS record fragmentation
+- [x] TCP Fragmentation
+
+## Todo
+- [ ] HTTP shenanigans
+- [ ] unit tests...
+- [ ] IPv6
