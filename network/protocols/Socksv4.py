@@ -1,6 +1,6 @@
 from exception.ParserException import ParserException
 from network.NetworkAddress import NetworkAddress
-from network.WrappedSocket import WrappedSocket
+from network.tcp.WrappedTcpSocket import WrappedTcpSocket
 from util.constants import SOCKSv4_HEADER
 from util.Util import is_valid_ipv4_address
 
@@ -14,7 +14,7 @@ class Socksv4:
     BIND_MODE = b'\02'
 
     @staticmethod
-    def read_socks4(connection_socket: WrappedSocket) -> tuple[str, int]:
+    def read_socks4(connection_socket: WrappedTcpSocket) -> tuple[str, int]:
 
         version = connection_socket.recv(1)
         if version != SOCKSv4_HEADER:

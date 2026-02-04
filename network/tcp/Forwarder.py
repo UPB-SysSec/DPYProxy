@@ -2,13 +2,13 @@ import logging
 import threading
 
 from enumerators.TlsVersion import TlsVersion
-from network.WrappedSocket import WrappedSocket
+from network.tcp.WrappedTcpSocket import WrappedTcpSocket
 from util.constants import STANDARD_SOCKET_RECEIVE_SIZE, TLS_1_0_HEADER, TLS_1_2_HEADER, TLS_1_1_HEADER
 
 
 class Forwarder:
 
-    def __init__(self, socket1: WrappedSocket, socket1_name: str, socket2: WrappedSocket, socket2_name: str,
+    def __init__(self, socket1: WrappedTcpSocket, socket1_name: str, socket2: WrappedTcpSocket, socket2_name: str,
                  record_frag: bool = False, record_version: str = TlsVersion.DEFAULT.value, frag_size: int = 0):
         self.socket1 = socket1
         self.socket2 = socket2
@@ -29,7 +29,7 @@ class Forwarder:
                                                      f"{self.socket2_name}->{self.socket1_name}",
                                                      )).start()
 
-    def _forward(self, from_socket: WrappedSocket, to_socket: WrappedSocket, direction: str, record_frag=False,
+    def _forward(self, from_socket: WrappedTcpSocket, to_socket: WrappedTcpSocket, direction: str, record_frag=False,
                  record_version: str = TlsVersion.DEFAULT.value):
         """
         Forwards data between two sockets with optional record manipulation. Falls back to forwarding if no TLS records
@@ -83,6 +83,7 @@ class Forwarder:
                     if record_frag:
                         record = self.fragment_record(base_header, record_len, record[5:])
                     to_socket.send(record)
+            logging.info("### Cancelled forwarding ###")
         except BrokenPipeError as e:
             self.debug(f"Forwarding broken with {e}", direction)
             to_socket.try_close()

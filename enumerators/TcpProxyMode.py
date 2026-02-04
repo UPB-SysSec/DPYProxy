@@ -1,7 +1,7 @@
 from enum import Enum
 
 
-class ProxyMode(Enum):
+class TcpProxyMode(Enum):
     """
     Modes the proxy can operate in
     """

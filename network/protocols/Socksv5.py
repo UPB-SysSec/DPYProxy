@@ -2,7 +2,7 @@ import socket
 
 from exception.ParserException import ParserException
 from network.NetworkAddress import NetworkAddress
-from network.WrappedSocket import WrappedSocket
+from network.tcp.WrappedTcpSocket import WrappedTcpSocket
 from util.constants import SOCKSv5_HEADER
 from util.Util import is_valid_ipv4_address
 
@@ -19,7 +19,7 @@ class Socksv5:
     NO_AUTH = b'\x00'
 
     @staticmethod
-    def read_socks5(connection_socket: WrappedSocket) -> tuple[str, int]:
+    def read_socks5(connection_socket: WrappedTcpSocket) -> tuple[str, int]:
 
         # read connection methods
         version = connection_socket.recv(1)
@@ -64,7 +64,7 @@ class Socksv5:
         return host, port
 
     @staticmethod
-    def _read_address(connection_socket: WrappedSocket) -> str:
+    def _read_address(connection_socket: WrappedTcpSocket) -> str:
         address_type = connection_socket.recv(1)
         if address_type == b'\x01':
             # ipv4
@@ -95,7 +95,7 @@ class Socksv5:
                 + server_address.port.to_bytes(2, byteorder='big'))
 
     @staticmethod
-    def socks5_ok(connection_socket: WrappedSocket) -> bytes:
+    def socks5_ok(connection_socket: WrappedTcpSocket) -> bytes:
         host_ip, host_port = connection_socket.socket.getsockname()
         host_address = b'\x01' + socket.inet_aton(host_ip)
         return SOCKSv5_HEADER + b'\x00' + Socksv5.RESERVED_BYTE + host_address + host_port.to_bytes(2, byteorder='big')

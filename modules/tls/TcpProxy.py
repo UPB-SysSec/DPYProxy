@@ -1,16 +1,16 @@
 import logging
+import select
 import socket
 import threading
 
-from enumerators.ProxyMode import ProxyMode
+from enumerators.TcpProxyMode import TcpProxyMode
 from enumerators.TlsVersion import TlsVersion
-from network.ConnectionHandler import ConnectionHandler
 from network.NetworkAddress import NetworkAddress
-from network.WrappedSocket import WrappedSocket
-from util.constants import TLS_1_0_HEADER, TLS_1_2_HEADER, TLS_1_1_HEADER, STANDARD_SOCKET_RECEIVE_SIZE
+from network.tcp.TcpConnectionHandler import TcpConnectionHandler
+from network.tcp.WrappedTcpSocket import WrappedTcpSocket
 
 
-class Proxy:
+class TcpProxy:
     """
     Proxy server
     """
@@ -20,10 +20,10 @@ class Proxy:
                  record_frag: bool = False,
                  tcp_frag: bool = False,
                  frag_size: int = 20,
-                 dot_ip: str = "8.8.4.4",
-                 disabled_modes: list[ProxyMode] = None,
+                 dns_server: NetworkAddress = None,
+                 disabled_modes: list[TcpProxyMode] = None,
                  forward_proxy: NetworkAddress = None,
-                 forward_proxy_mode: ProxyMode = ProxyMode.HTTPS,
+                 forward_proxy_mode: TcpProxyMode = TcpProxyMode.HTTPS,
                  forward_proxy_resolve_address: bool = False):
         # timeout for socket reads and message reception
         self.timeout = timeout
@@ -36,7 +36,7 @@ class Proxy:
         self.tcp_frag = tcp_frag
         self.frag_size = frag_size
         # whether to use dot for domain resolution
-        self.dot_ip = dot_ip
+        self.dns_server = dns_server
         self.disabled_modes = disabled_modes
         if self.disabled_modes is None:
             self.disabled_modes = []
@@ -46,9 +46,11 @@ class Proxy:
         self.forward_proxy_resolve_address = forward_proxy_resolve_address
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.continue_processing = True
 
-    def handle(self, client_socket: WrappedSocket, address: NetworkAddress):
-        ConnectionHandler(
+
+    def handle(self, client_socket: WrappedTcpSocket, address: NetworkAddress):
+        return TcpConnectionHandler(
             client_socket,
             address,
             self.timeout,
@@ -56,7 +58,7 @@ class Proxy:
             self.record_frag,
             self.tcp_frag,
             self.frag_size,
-            self.dot_ip,
+            self.dns_server,
             self.disabled_modes,
             self.forward_proxy,
             self.forward_proxy_mode,
@@ -71,15 +73,20 @@ class Proxy:
         # opening server socket
         self.server.bind((self.address.host, self.address.port))
         self.server.listen()
-        print(f"### Started proxy on {self.address.host}:{self.address.port} ###")
-        if self.dot_ip:
-            logging.debug(f"Using DoT resolver {self.dot_ip}")
+        print(f"### Started TCP proxy on {self.address.host}:{self.address.port} ###")
+        if self.dns_server:
+            logging.debug(f"Using DNS server {self.dns_server}")
         if self.forward_proxy:
             logging.debug(f"Using forward proxy {self.forward_proxy}")
-        while True:  # listen for incoming connections
+        while self.continue_processing:
+            readable, _, _ = select.select([self.server], [], [], 1)
+            if not readable:
+                continue
+            # listen for incoming connections
             client_socket, address = self.server.accept()
             address = NetworkAddress(address[0], address[1])
-            client_socket = WrappedSocket(self.timeout, client_socket)
+            client_socket = WrappedTcpSocket(self.timeout, client_socket)
             logging.info(f"request from {address.host}:{address.port}")
             # spawn a new thread that runs the function handle()
             threading.Thread(target=self.handle, args=(client_socket, address)).start()
+        logging.info("### Stopped proxy ###")

@@ -1,38 +1,21 @@
-import logging
-import string
-import sys
-
 import argparse
+import logging
+import sys
+import threading
+import time
+from argparse import ArgumentParser
 
-from enumerators.ProxyMode import ProxyMode
-from enumerators.TlsVersion import TlsVersion
-from network.Proxy import Proxy
-from network.NetworkAddress import NetworkAddress
+from enumerators.Modules import Modules
+from modules.Module import Module
+from modules.dns.DnsModule import DnsModule
+from modules.tls.TlsModule import TlsModule
 
 
-def initialize_parser():
-    """
-    Registers all arguments for command line parsing.
-    :return:
-    """
+def extract_activated_modules(parser: ArgumentParser) -> list[Module]:
 
-    def list_of_modes(arg):
-        return list(map(lambda x: ProxyMode(x), arg.split(",")))
+    def list_of_modules(arg):
+        return list(map(lambda x: Modules.__getitem__(x), arg.split(",")))
 
-    def record_header_version(arg):
-        try:
-            return TlsVersion.__getitem__(arg).value
-        except:
-            if len(arg) == 4 and all(c in string.hexdigits for c in arg):
-                return arg
-            else:
-                logging.error(f"{arg} not a predefined TLS version, not 2 bytes long or contains non-hex characters.")
-                exit()
-
-    parser = argparse.ArgumentParser(description='Proxy for circumventing DPI-based censorship.',
-                                     usage='%(prog)s [options]', add_help=False)
-
-    # Standard arguments
     general = parser.add_argument_group('Standard options')
 
     general.add_argument('-h', '--help', action='help',
@@ -43,98 +26,65 @@ def initialize_parser():
                          action=argparse.BooleanOptionalAction,
                          help="Turns on debugging")
 
-    general.add_argument('--disabled_modes', type=list_of_modes,
-                         choices=ProxyMode,
+    general.add_argument('--disabled_modules', type=list_of_modules,
+                         # choices=Modules,
                          default=[],
-                         help='List of proxy modes to ignore. By default, all none are disabled. Hence, all are enabled')
+                         help='List of proxy modules to disable. By default, all none are disabled. Hence, all are enabled')
 
-    general.add_argument('--timeout', type=int,
-                         default=120,
-                         help='Connection timeout in seconds')
+    # only parse arguments of basic module to determine used modules
+    args = parser.parse_known_args()[0]
 
-    general.add_argument('--host', type=str,
-                         default="localhost",
-                         help='Address the proxy server runs on')
-
-    general.add_argument('--port', type=int,
-                         default=4433,
-                         help='Port the proxy server runs on')
-
-    circumventions = parser.add_argument_group('Circumvention options')
-
-    circumventions.add_argument('--record_header_version', type=record_header_version,
-                                default=TlsVersion.DEFAULT.name,
-                                help=f'Overwrites the TLS version in the TLS record with the given bytes. Pre-defined '
-                                     f'values {[x.name for x in TlsVersion]} or 2 byte long values such as 0303 or '
-                                     f'FFFF can be provided.', )
-
-    circumventions.add_argument('--record_frag', type=bool,
-                                default=True,
-                                action=argparse.BooleanOptionalAction,
-                                help='Whether to use record fragmentation to forwarded TLS handshake messages')
-
-    circumventions.add_argument('--tcp_frag', type=bool,
-                                default=True,
-                                action=argparse.BooleanOptionalAction,
-                                help='Whether to use TCP fragmentation to forwarded messages.')
-
-    circumventions.add_argument('--frag_size', type=int,
-                                default=20,
-                                help='Bytes in each TCP/TLS record fragment')
-
-    circumventions.add_argument('--dot_resolver', type=str,
-                                default=None,
-                                help='DNS server IP for DNS over TLS')
-
-    forward_proxy = parser.add_argument_group('Forward proxy options')
-
-    forward_proxy.add_argument('--forward_proxy_host', type=str,
-                               default='localhost',
-                               help='Host of the forward proxy if any is present')
-
-    forward_proxy.add_argument('--forward_proxy_port', type=int,
-                               default=None,
-                               help='Port the forward proxy server runs on')
-
-    forward_proxy.add_argument('--forward_proxy_mode', type=ProxyMode.__getitem__,
-                               choices=ProxyMode,
-                               default=ProxyMode.HTTPS,
-                               help='The proxy type of the forward proxy')
-
-    forward_proxy.add_argument('--forward_proxy_resolve_address', type=bool,
-                               default=False,
-                               action=argparse.BooleanOptionalAction,
-                               help='''Whether to resolve domains before including them in the HTTP CONNECT request to the
-                        second proxy''')
-
-    return parser.parse_args()
-
-
-def main():
-    """
-    Initializes command line parsing and starts a proxy.
-    :return: None
-    """
-    args = initialize_parser()
-
+    # change logging
     if args.debug:
         logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
     else:
         logging.basicConfig(stream=sys.stderr, level=logging.INFO)
 
-    server_address = NetworkAddress(args.host, args.port)
-    forward_proxy = None
-    if args.forward_proxy_port is not None:
-        forward_proxy = NetworkAddress(args.forward_proxy_host, args.forward_proxy_port)
+    # crate and set enabled modules
+    return list(map(lambda x: x.create_module(parser),
+                               [x for x in Modules if x not in args.disabled_modules]))
 
-    if args.forward_proxy_mode in [ProxyMode.HTTP, ProxyMode.SNI] and args.forward_proxy_mode != args.proxy_mode:
-        logging.debug("Forward proxy modes HTTP and SNI only usable if proxy mode is HTTP or SNI respectively.")
-        exit()
+def main():
+    """
+    Starts the proxy with all enabled modules.
+    """
+    # initialize argumentParser
+    parser = argparse.ArgumentParser(description='Proxy for circumventing DPI-based censorship.',
+                                     usage='%(prog)s [options]', add_help=False)
 
-    proxy = Proxy(server_address, args.timeout, args.record_header_version, args.record_frag, args.tcp_frag,
-                  args.frag_size, args.dot_resolver, args.disabled_modes, forward_proxy, args.forward_proxy_mode,
-                  args.forward_proxy_resolve_address)
-    proxy.start()
+    # parse options of other modules
+    for otherModule in Modules:
+        otherModule.get_class().register_parameters(parser)
+
+    activated_modules = extract_activated_modules(parser)
+
+
+    parsed_args = parser.parse_args()
+
+    for otherModule in activated_modules:
+        otherModule.extract_parameters(parsed_args)
+
+    # if tls module and DNS module are running provide dns server to tls module
+    dns_module = next((mod for mod in activated_modules if isinstance(mod, DnsModule)), None)
+    tls_module = next((mod for mod in activated_modules if isinstance(mod, TlsModule)), None)
+
+    if dns_module and tls_module:
+        logging.info("DNS Module and TLS module found. Setting DNS server for TLS Module")
+        tls_module.set_dns_server(dns_module.server_address)
+        tls_module.extract_parameters(parsed_args)
+
+    # start modules
+    for otherModule in activated_modules:
+        threading.Thread(target=otherModule.start).start()
+
+    try:
+        while True:
+            time.sleep(1000)
+    except KeyboardInterrupt:
+        logging.info("Received Keyboard Interrupt. Cancelling modules and exiting!")
+        for otherModule in activated_modules:
+            otherModule.stop()
+        sys.exit(0)
 
 
 if __name__ == '__main__':
