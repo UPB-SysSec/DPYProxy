@@ -7,7 +7,8 @@ name = "dpyproxy"
 version = "2.0.0"
 description = "Python proxy that implements DPI evasion mechanisms (TLS record fragmentation, TCP segmentation, encrypted DNS)"
 readme = "README.md"
-license = { file = "LICENSE" }
+license = "Apache-2.0"
+license-files = ["LICEN[CS]E*"]
 requires-python = ">=3.10"
 keywords = ["proxy", "dpi", "censorship", "tls", "dns", "privacy"]
 classifiers = [
