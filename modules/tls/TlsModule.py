@@ -63,12 +63,12 @@ class TlsModule(Module):
                                          f'FFFF can be provided.', )
 
 
-        tls_module.add_argument('--tls_record_frag', type=bool,
+        tls_module.add_argument('--tls_record_frag',
                                     default=True,
                                     action=BooleanOptionalAction,
                                     help='Whether to use record fragmentation to forwarded TLS handshake messages')
 
-        tls_module.add_argument('--tls_tcp_frag', type=bool,
+        tls_module.add_argument('--tls_tcp_frag',
                                     default=True,
                                     action=BooleanOptionalAction,
                                     help='Whether to use TCP fragmentation to forwarded messages.')
@@ -98,7 +98,7 @@ class TlsModule(Module):
                                 default=TcpProxyMode.HTTPS,
                                 help='The proxy type of the forward proxy')
 
-        tls_module.add_argument('--tls_forward_proxy_resolve_address', type=bool,
+        tls_module.add_argument('--tls_forward_proxy_resolve_address',
                                    default=False,
                                    action=BooleanOptionalAction,
                                    help='''Whether to resolve domains before including them in the HTTP CONNECT request to the

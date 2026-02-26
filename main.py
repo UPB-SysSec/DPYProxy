@@ -21,7 +21,7 @@ def extract_activated_modules(parser: ArgumentParser) -> list[Module]:
     general.add_argument('-h', '--help', action='help',
                          help='Show this help message and exit')
 
-    general.add_argument('--debug', type=bool,
+    general.add_argument('--debug',
                          default=False,
                          action=argparse.BooleanOptionalAction,
                          help="Turns on debugging")
