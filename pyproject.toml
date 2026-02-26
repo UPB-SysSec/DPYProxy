@@ -49,8 +49,7 @@ dependencies = [
 
 [project.urls]
 Homepage = "https://github.com/UPB-SysSec/DPYProxy"
-Repository = "https://github.com/UPB-SysSec/DPYProxy"
-"Bug Tracker" = "https://github.com/UPB-SysSec/DPYProxy/issues"
+Issues = "https://github.com/UPB-SysSec/DPYProxy/issues"
 
 [project.scripts]
 dpyproxy = "dpyproxy:main"
