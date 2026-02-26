@@ -25,10 +25,6 @@ classifiers = [
     "Topic :: Security :: Cryptography",
 ]
 
-# Only direct dependencies that DPYProxy's own code imports are listed here.
-# Transitive deps (hpack, hyperframe, h11, sniffio, idna, cffi, pycparser,
-# pyasn1, pyasn1-modules, certifi, exceptiongroup) are pulled in automatically
-# by the packages that need them and are intentionally omitted.
 dependencies = [
     # DNS-over-QUIC / DNS-over-HTTPS transport
     "aioquic>=1.2.0",
@@ -63,7 +59,7 @@ dpyproxy = "dpyproxy:main"
 # The upstream repo has a flat layout: main.py and subdirs (enumerators/,
 # exception/, modules/, network/, util/) all live at the root with no
 # enclosing package. We include them all as top-level packages/modules,
-# plus the dpyproxy/ shim that provides the console_scripts entry-point.
+# alongside the dpyproxy/ shim that provides the console_scripts entry-point.
 packages = [
     "dpyproxy",
     "enumerators",
@@ -72,8 +68,9 @@ packages = [
     "network",
     "util",
 ]
-# main.py is not inside any package dir so we must include it explicitly
-artifacts = ["main.py"]
+# main.py is not inside any package dir; include= (not artifacts=) is the
+# correct key for source files that should land at the site-packages root.
+include = ["main.py"]
 
 [tool.hatch.build.targets.sdist]
 include = [
@@ -84,7 +81,6 @@ include = [
     "network/",
     "util/",
     "main.py",
-    "requirements.txt",
     "README.md",
     "LICENSE",
 ]
