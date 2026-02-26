@@ -1,0 +1,90 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "dpyproxy"
+version = "2.0.0"
+description = "Python proxy that implements DPI evasion mechanisms (TLS record fragmentation, TCP segmentation, encrypted DNS)"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+keywords = ["proxy", "dpi", "censorship", "tls", "dns", "privacy"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Internet :: Proxy Servers",
+    "Topic :: Security :: Cryptography",
+]
+
+# Only direct dependencies that DPYProxy's own code imports are listed here.
+# Transitive deps (hpack, hyperframe, h11, sniffio, idna, cffi, pycparser,
+# pyasn1, pyasn1-modules, certifi, exceptiongroup) are pulled in automatically
+# by the packages that need them and are intentionally omitted.
+dependencies = [
+    # DNS-over-QUIC / DNS-over-HTTPS transport
+    "aioquic>=1.2.0",
+    # async I/O used by DNS module
+    "anyio>=4.8.0",
+    # TLS/crypto primitives
+    "cryptography>=44.0.0",
+    "pyOpenSSL>=25.0.0",
+    # DNS resolution
+    "dnspython>=2.7.0",
+    # HTTP/2 framing (used by aioquic / httpx internally and may be imported directly)
+    "h2>=4.2.0",
+    # HTTP client used for DoH queries
+    "httpx>=0.28.1",
+    # service-identity verifies TLS certificates against hostnames
+    "service-identity>=24.2.0",
+    # exceptiongroup backport: needed on Python 3.10 (built-in from 3.11+)
+    "exceptiongroup>=1.2.2; python_version < '3.11'",
+    # typing_extensions backport: needed on Python 3.10/3.11
+    "typing_extensions>=4.12.2; python_version < '3.12'",
+]
+
+[project.urls]
+Homepage = "https://github.com/UPB-SysSec/DPYProxy"
+Repository = "https://github.com/UPB-SysSec/DPYProxy"
+"Bug Tracker" = "https://github.com/UPB-SysSec/DPYProxy/issues"
+
+[project.scripts]
+dpyproxy = "dpyproxy:main"
+
+[tool.hatch.build.targets.wheel]
+# The upstream repo has a flat layout: main.py and subdirs (enumerators/,
+# exception/, modules/, network/, util/) all live at the root with no
+# enclosing package. We include them all as top-level packages/modules,
+# plus the dpyproxy/ shim that provides the console_scripts entry-point.
+packages = [
+    "dpyproxy",
+    "enumerators",
+    "exception",
+    "modules",
+    "network",
+    "util",
+]
+# main.py is not inside any package dir so we must include it explicitly
+artifacts = ["main.py"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "dpyproxy/",
+    "enumerators/",
+    "exception/",
+    "modules/",
+    "network/",
+    "util/",
+    "main.py",
+    "requirements.txt",
+    "README.md",
+    "LICENSE",
+]
