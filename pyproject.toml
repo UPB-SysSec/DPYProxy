@@ -37,12 +37,12 @@ dependencies = [
     # async I/O used by DNS module
     "anyio>=4.8.0",
     # TLS/crypto primitives
-    "cryptography>=44.0.0",
+    "cryptography>=46.0.5",
     "pyOpenSSL>=25.0.0",
     # DNS resolution
     "dnspython>=2.7.0",
     # HTTP/2 framing (used by aioquic / httpx internally and may be imported directly)
-    "h2>=4.2.0",
+    "h2>=4.3.0",
     # HTTP client used for DoH queries
     "httpx>=0.28.1",
     # service-identity verifies TLS certificates against hostnames
