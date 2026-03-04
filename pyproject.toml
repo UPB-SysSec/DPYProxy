@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "dpyproxy"
-version = "2.0.0"
+version = "2.1.0"
 description = "Python proxy that implements DPI evasion mechanisms (TLS record fragmentation, TCP segmentation, encrypted DNS)"
 readme = "README.md"
 license = "Apache-2.0"
@@ -25,9 +25,10 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
     "Topic :: Internet :: Proxy Servers",
 ]
-maintainers = [
+
+authors = [
     {name = "Niklas Niere", email = "niklas.niere@upb.de"},
-    {name = "Felix Lange", email = "felix.lange@upb.de"}
+    {name = "Felix Lange", email = "felix.lange@upb.de"},
 ]
 
 dependencies = [
