@@ -32,7 +32,8 @@ used by the TLS module.
 # Requirements
 - python3 (if you want to run DPYPRoxy with Python)
   - `sudo apt install python3`
-  - `pip3 install -r requirements.txt`
+  - `pip3 install -r requirements.txt` to run with `python3 main.py`
+  - OR `pip3 install .` to run as module with `python3 -m dpyproxy`
 - docker (if you want to run DPYProxy in a container)
   - https://docs.docker.com/engine/install/
   
