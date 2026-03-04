@@ -25,6 +25,10 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
     "Topic :: Internet :: Proxy Servers",
 ]
+maintainers = [
+    {name = "Niklas Niere", email = "niklas.niere@upb.de"},
+    {name = "Felix Lange", email = "felix.lange@upb.de"}
+]
 
 dependencies = [
     # DNS-over-QUIC / DNS-over-HTTPS transport
