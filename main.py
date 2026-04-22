@@ -4,11 +4,17 @@ import sys
 import threading
 import time
 from argparse import ArgumentParser
+from importlib.metadata import PackageNotFoundError, version
 
 from enumerators.Modules import Modules
 from modules.Module import Module
 from modules.dns.DnsModule import DnsModule
 from modules.tls.TlsModule import TlsModule
+
+try:
+    __version__ = version("dpyproxy")
+except PackageNotFoundError:
+    __version__ = "2.1.0"
 
 
 def extract_activated_modules(parser: ArgumentParser) -> list[Module]:
@@ -20,6 +26,10 @@ def extract_activated_modules(parser: ArgumentParser) -> list[Module]:
 
     general.add_argument('-h', '--help', action='help',
                          help='Show this help message and exit')
+
+    general.add_argument('--version', action='version',
+                         version=f'%(prog)s {__version__}',
+                         help='Show program version and exit')
 
     general.add_argument('--debug',
                          default=False,
