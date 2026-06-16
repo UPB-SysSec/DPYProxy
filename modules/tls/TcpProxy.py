@@ -83,7 +83,11 @@ class TcpProxy:
             if not readable:
                 continue
             # listen for incoming connections
-            client_socket, address = self.server.accept()
+            try:
+                client_socket, address = self.server.accept()
+            except OSError:
+                logging.error("### Socket closed by OS. Stopping TCP Proxy ###")
+                return
             address = NetworkAddress(address[0], address[1])
             client_socket = WrappedTcpSocket(self.timeout, client_socket)
             logging.info(f"request from {address.host}:{address.port}")
