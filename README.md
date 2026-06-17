@@ -30,10 +30,11 @@ Thus, if you run both modules, the DNS module automatically determines a working
 used by the TLS module.
 
 # Requirements
+You can run DPYProxy with Python or Docker. The requirements for both options are listed below.
 - python3 (if you want to run DPYPRoxy with Python)
   - `sudo apt install python3`
-  - `pip3 install -r requirements.txt` to run with `python3 main.py`
-  - OR `pip3 install .` to run as module with `python3 -m dpyproxy`
+  - `pip3 install .` to run as module with `python3 main.py` or `python3 -m dpyproxy`
+  - OR [install hatch](https://hatch.pypa.io/latest/install/) and run using `hatch run dpyproxy`
 - docker (if you want to run DPYProxy in a container)
   - https://docs.docker.com/engine/install/
   
