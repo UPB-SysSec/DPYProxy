@@ -37,6 +37,8 @@ class TcpConnectionHandler:
         record_frag: bool,
         tcp_frag: bool,
         frag_size: int,
+        http_strategy: int,
+        http_smuggling_uncensored_url: str,
         dns_server: NetworkAddress,
         disabled_modes: list[TcpProxyMode],
         forward_proxy: NetworkAddress,
@@ -51,6 +53,8 @@ class TcpConnectionHandler:
         self.record_version = record_version
         self.tcp_frag = tcp_frag
         self.frag_size = frag_size
+        self.http_strategy = http_strategy
+        self.http_smuggling_uncensored_url = http_smuggling_uncensored_url
         self.dns_server = dns_server
         self.disabled_modes = disabled_modes
         self.forward_proxy = forward_proxy
@@ -128,6 +132,8 @@ class TcpConnectionHandler:
             self.record_frag,
             self.record_version,
             self.frag_size,
+            self.http_strategy,
+            self.http_smuggling_uncensored_url,
         ).start()
 
     def get_proxy_mode(self) -> TcpProxyMode:

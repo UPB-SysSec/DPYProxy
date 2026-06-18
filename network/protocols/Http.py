@@ -1,3 +1,4 @@
+from enumerators.HttpMethod import HttpMethod
 from exception.ParserException import ParserException
 from network.NetworkAddress import NetworkAddress
 from network.tcp.WrappedTcpSocket import WrappedTcpSocket
@@ -9,12 +10,19 @@ class Http:
     """
 
     @staticmethod
-    def _parse_http_method(wrapped_socket: WrappedTcpSocket, method: str, peek: bool = False) -> (str, int, str):
+    def is_valid_http(wrapped_socket: WrappedTcpSocket) -> bool:
+        try:
+            Http._parse_http_method(wrapped_socket, HttpMethod.all(), True)
+            return True
+        except ParserException:
+            return False
+
+    @staticmethod
+    def _parse_http_method(wrapped_socket: WrappedTcpSocket, methods: list[str], peek: bool = False) -> (str, int, str):
         """
         Reads the first line of a http method to parse the domain from it.
         :return: host and port in the method, defaults to port 80 if no port found
         """
-        method = method.upper()
         try:
             # read complete message
             message = wrapped_socket.read_until([b"\n\n", b"\r\n\r\n"], 500, peek).decode("ASCII")
@@ -24,14 +32,24 @@ class Http:
             else:
                 first_line = message.split("\n")[0]
         except UnicodeDecodeError as e:
-            raise ParserException(f"Could not decode ASCII in first line of HTTP {method} request with exception {e}")
-        if not first_line.upper().startswith(f"{method} "):
-            raise ParserException(f"Not a {method} request")
-        if first_line.count(" ") != 2:
-            raise ParserException(f"Not a valid {method} request, could not determine target URI")
-        _, uri, version = first_line.split(" ")
+            raise ParserException(f"Could not decode ASCII in first line of HTTP request with exception {e}")
+        # check for any method
+        parsed_method = False
+        for method in methods:
+            if first_line.upper().startswith(f"{method.upper()} "):
+                parsed_method = True
+        if not parsed_method:
+            raise ParserException(f"Not a {methods} request")
+        if first_line.count(" ") not in [1, 2]:
+            raise ParserException("Not a valid HTTP request, could not determine target URI")
+        if first_line.count(" ") == 1:
+            # HTTP/0.9
+            _, uri = first_line.split(" ")
+            version = "HTTP/0.9"
+        else:
+            _, uri, version = first_line.split(" ")
         if version.upper() != "HTTP/1.1" and version.upper() != "HTTP/1.0" and version.upper() != "HTTP/0.9":
-            raise ParserException(f"Not a valid {method} request, only HTTP/0.9 HTTP/1.0, and HTTP/1.1 supported")
+            raise ParserException("Not a valid HTTP request, only HTTP/0.9, HTTP/1.0, and HTTP/1.1 supported")
         host, _, port = Http.parse_uri(uri)
         return host, port, version
 
@@ -41,7 +59,7 @@ class Http:
         Reads the first line of a http get request.
         :return: host, port, and version from the http get request.
         """
-        return Http._parse_http_method(wrapped_socket, "GET", True)
+        return Http._parse_http_method(wrapped_socket, ["GET"], True)
 
     @staticmethod
     def read_http_connect(wrapped_socket: WrappedTcpSocket) -> (str, int, str):
@@ -49,7 +67,7 @@ class Http:
         Reads the first line of a http connect request.
         :return: host, port, and http version from the http connect request.
         """
-        return Http._parse_http_method(wrapped_socket, "CONNECT", False)
+        return Http._parse_http_method(wrapped_socket, ["CONNECT"], False)
 
     @staticmethod
     def parse_uri(uri: str) -> (str, str, int):

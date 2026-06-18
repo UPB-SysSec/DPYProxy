@@ -16,6 +16,8 @@ from modules.tls.TlsModule import TlsModule
 def extract_activated_modules(parser: ArgumentParser) -> list[Module]:
 
     def list_of_modules(arg):
+        if arg is None or len(arg) == 0:
+            return []
         return list(map(lambda x: Modules.__getitem__(x), arg.split(",")))
 
     general = parser.add_argument_group("Standard options")
@@ -28,8 +30,8 @@ def extract_activated_modules(parser: ArgumentParser) -> list[Module]:
         "--disabled_modules",
         type=list_of_modules,
         # choices=Modules,
-        default=[],
-        help="List of proxy modules to disable. By default, all none are disabled. Hence, all are enabled",
+        default=[Modules.HTTP],
+        help="List of proxy modules to disable. By default, only the HTTP module is disabled.",
     )
 
     # only parse arguments of basic module to determine used modules

@@ -140,17 +140,17 @@ class TlsModule(Module):
             exit()
 
         self.proxy = TcpProxy(
-            server_address,
-            args.tls_timeout,
-            args.tls_record_version,
-            args.tls_record_frag,
-            args.tls_tcp_frag,
-            args.tls_frag_size,
-            self.dns_server,
-            args.tls_disabled_modes,
-            forward_proxy,
-            args.tls_forward_proxy_mode,
-            args.tls_forward_proxy_resolve_address,
+            address=server_address,
+            timeout=args.tls_timeout,
+            record_version=args.tls_record_version,
+            record_frag=args.tls_record_frag,
+            tcp_frag=args.tls_tcp_frag,
+            frag_size=args.tls_frag_size,
+            dns_server=self.dns_server,
+            disabled_modes=args.tls_disabled_modes,
+            forward_proxy=forward_proxy,
+            forward_proxy_mode=args.tls_forward_proxy_mode,
+            forward_proxy_resolve_address=args.tls_forward_proxy_resolve_address,
         )
 
     def start(self):

@@ -29,6 +29,27 @@ method manually (see Usage). However, by default, the TLS module uses the DNS mo
 Thus, if you run both modules, the DNS module automatically determines a working circumvention method for DNS queries 
 used by the TLS module.
 
+### HTTP Module
+You can run the HTTP module of DPYProxy locally or on a separate machine. It functions like an HTTP CONNECT/SOCKSv4/SOCKSv5 proxy. I.e., you can specify
+it as your Firefox/Chrome/System Proxy.
+
+In a typical setup, DPYProxy runs locally replacing your previous proxy in your browser or system setup. You can specify
+your previous proxy as a forward proxy for DPYProxy. This can be helpful if you need DPYProxy for DPI evasion and a
+separate proxy for IP censorship circumvention.
+
+The HTTP module does not automatically determine a working circumvention method. You need to specify the circumvention 
+method manually (see Usage). Simple HTTP request alterations (e.g., lowercase request) and HTTP Request Smuggling 
+strategies are implemented. A list of all implemented strategies can be found in: modules/http/HttpStrategies. 
+**Be careful: HTTP request smuggling is a network attack against benign hosts and its implementation is experimental.
+Plain HTTP traffic is also visible to any party that can read your traffic (such as your ISP). Use HTTPS (HTTP over TLS)
+instead**
+
+> The HTTP module is disabled by default. Enable by providing --disabled-modules ""
+
+> HTTP request smuggling can be dangerous: https://portswigger.net/web-security/request-smuggling. Only enable if you
+> know what you are doing and only use it against servers you have permission access via request smuggling. 
+> HttpStrategies 100-129 are HTTP request smuggling strategies.
+
 # Requirements
 You can run DPYProxy with Python or Docker. The requirements for both options are listed below.
 - python3 (if you want to run DPYPRoxy with Python)
@@ -88,9 +109,6 @@ TLS Module:
                         Connection timeout in seconds
   --tls_host TLS_HOST   Address the proxy server runs on
   --tls_port TLS_PORT   Port the proxy server runs on
-  --tls_record_version TLS_RECORD_VERSION
-                        Overwrites the TLS version in the TLS record with the given bytes. Pre-defined values ['DEFAULT', 'TLS10', 'TLS11', 'TLS12', 'TLS13_DRAFT_28', 'TLS13', 'SSL3', 'INVALID_SMALLER',
-                        'INVALID_BIGGER'] or 2 byte long values such as 0303 or FFFF can be provided.
   --tls_record_frag, --no-tls_record_frag
                         Whether to use record fragmentation to forwarded TLS handshake messages (default: True)
   --tls_tcp_frag, --no-tls_tcp_frag
@@ -111,8 +129,7 @@ TLS Module:
                         Whether to resolve domains before including them in the HTTP CONNECT request to the second proxy (default: False)
 
 DNS Module:
-  --dns_mode DNS_MODE   Mode that the DNS proxy operates in. Default AUTO. If not set to AUTO, still attempts to automatically determine a resolver for the configured mode. To pre-define the used DNS mode and server
-                        set this flag and the dns_resolver_host and optionally the dns_resolver_port flags.
+  --dns_mode DNS_MODE   Mode that the DNS proxy operates in. Default AUTO. If not set to AUTO, still attempts to automatically determine a resolver for the configured mode. To pre-define the used DNS mode and server set this flag and the dns_resolver_host and optionally the dns_resolver_port flags.
   --dns_timeout DNS_TIMEOUT
                         Connection timeout in seconds. For the LAST_RESPONSE mode this timeout will always be reached. Set this timeout and the timeout of calling application accordingly.
   --dns_host DNS_HOST   Address the proxy server runs on
@@ -132,12 +149,23 @@ DNS Module:
   --dns_skip_working_file DNS_SKIP_WORKING_FILE
                         Whether taking the stored working resolver from a file should be skipped. Defaults to False.
 
+HTTP Module:
+  --http_timeout HTTP_TIMEOUT
+                        Connection timeout in seconds
+  --http_host HTTP_HOST
+                        Address the proxy server runs on
+  --http_port HTTP_PORT
+                        Port the proxy server runs on
+  --http_strategy HTTP_STRATEGY
+                        Number of which specific http manipulation strategy to apply. None: no manipulation, [1..70]: basic manipulations, [101, 129]: Smuggling.See HttpStrategies for meaning.
+  --http_smuggling_uncensored_url HTTP_SMUGGLING_UNCENSORED_URL
+                        Uncensored url to use for http smuggling.
+
 Standard options:
   -h, --help            Show this help message and exit
   --debug, --no-debug   Turns on debugging (default: False)
   --disabled_modules DISABLED_MODULES
                         List of proxy modules to disable. By default, all none are disabled. Hence, all are enabled
-
 ```
 
 ## Examples
@@ -153,6 +181,11 @@ resolver is started that can be used on the system in general and is used by the
 and sets the fragment size to 100 bytes. The TLS record will be of size 100 while the encompassing TCP segments will be
 just large enough to contain the fragmented TLS record. The DNS module is also enabled with its default auto mode to determine a working circumvention. Using this circumvention, a
 resolver is started that can be used on the system in general and is used by the TLS module by default.
+
+`python3 main.py --http_smuggling 23 --http_smuggling_uncensored_url 2` launches DPYProxy with HTTP Request Smuggling strategy number 23 enabled, using the second of three incorporated urls that are found to be uncensored (in china).  This specific strategy includes the Content-Length Header to set the bounds before the hidden request and the Transfer-Encoding Header to set them after the body to hide the second request. Additionally the Transfer-Encoding Header gets modified to include a 
+second Colon (Transfer-Encoding:: chunked). 
+A list of all implemented smuggling strategies (and direct manipulations) can be found in: modules/http/HttpStrategies. There you will also find the three uncensored urls.
+
 
 `python3 main.py --record_frag --forward_proxy_address 192.168.0.1 --forward_proxy_port 8080 --forward_proxy_mode HTTPS 
 --forward_proxy_resolve_address` launches DPYProxy with TLS record fragmentation and a forward proxy. The forward proxy 
@@ -202,9 +235,9 @@ functionality of DPYProxy is currently limited. Below, I gathered some potential
 - [x] Socksv4/Sockv5 proxy
 - [x] TLS record fragmentation
 - [x] TCP Fragmentation
+- [x] HTTP Circumventions
 
 ## Todo
-- [ ] HTTP shenanigans
 - [ ] unit tests...
 - [ ] IPv6
 

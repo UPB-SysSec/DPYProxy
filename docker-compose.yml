@@ -6,8 +6,9 @@ services:
       - "127.0.0.1:4433:4433"
       - "127.0.0.1:5533:5533"
       - "127.0.0.1:5533:5533/udp"
+      - "127.0.0.1:8080:8080"
     build:
       context: .
       dockerfile: Dockerfile
     restart: unless-stopped
-    command: ["--tls_frag_size", "20", "--debug", "--tls_port", "4433", "--tls_host", "0.0.0.0", "--dns_host", "0.0.0.0", "--dns_port", "5533"]
+    command: ["--tls_frag_size", "20", "--debug", "--tls_port", "4433", "--tls_host", "0.0.0.0", "--dns_host", "0.0.0.0", "--dns_port", "5533", "--http_host", "0.0.0.0", "--http_port", "8080", "--http_strategy", "1"]

@@ -23,6 +23,8 @@ class TcpProxy:
         record_frag: bool = False,
         tcp_frag: bool = False,
         frag_size: int = 20,
+        http_strategy: int = None,
+        http_smuggling_uncensored_url: str = "",
         dns_server: NetworkAddress = None,
         disabled_modes: list[TcpProxyMode] = None,
         forward_proxy: NetworkAddress = None,
@@ -39,6 +41,9 @@ class TcpProxy:
         self.record_frag = record_frag
         self.tcp_frag = tcp_frag
         self.frag_size = frag_size
+        # http manipulation strategy
+        self.http_strategy = http_strategy
+        self.http_smuggling_uncensored_url = http_smuggling_uncensored_url
         # whether to use dot for domain resolution
         self.dns_server = dns_server
         self.disabled_modes = disabled_modes
@@ -61,6 +66,8 @@ class TcpProxy:
             self.record_frag,
             self.tcp_frag,
             self.frag_size,
+            self.http_strategy,
+            self.http_smuggling_uncensored_url,
             self.dns_server,
             self.disabled_modes,
             self.forward_proxy,
