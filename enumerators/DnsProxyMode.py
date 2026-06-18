@@ -8,6 +8,7 @@ class DnsProxyMode(Enum):
     """
     Possible DNS Modes
     """
+
     AUTO = "AUTO"
     UDP = "UDP"
     DOT = "DOT"
@@ -22,11 +23,16 @@ class DnsProxyMode(Enum):
         return self.name
 
     def default_port(self) -> int:
-        if self==DnsProxyMode.UDP or self==DnsProxyMode.LAST_RESPONSE or self==DnsProxyMode.TCP or self==DnsProxyMode.TCP_FRAG:
+        if (
+            self == DnsProxyMode.UDP
+            or self == DnsProxyMode.LAST_RESPONSE
+            or self == DnsProxyMode.TCP
+            or self == DnsProxyMode.TCP_FRAG
+        ):
             return Port.DNS.value
-        elif self==DnsProxyMode.DOT or self==DnsProxyMode.DOQ:
+        elif self == DnsProxyMode.DOT or self == DnsProxyMode.DOQ:
             return Port.DOT.value
-        elif self==DnsProxyMode.DOH or self==DnsProxyMode.DOH3:
+        elif self == DnsProxyMode.DOH or self == DnsProxyMode.DOH3:
             return Port.DOH.value
         else:
             logging.error("AUTO mode does not have a default port.")

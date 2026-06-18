@@ -19,7 +19,6 @@ class Dns:
         except Exception as e:
             raise DnsException(f"Could not parse DNS message: {e}")
 
-
     @staticmethod
     def query_from_domain(domain: str) -> dns.message.Message:
         domain = dns.name.from_text(domain)
@@ -28,8 +27,7 @@ class Dns:
 
         query = dns.message.make_query(domain, dns.rdatatype.A)
         query.flags |= dns.flags.AD
-        query.find_rrset(query.additional, dns.name.root, 65535,
-                         dns.rdatatype.OPT, create=True, force_unique=True)
+        query.find_rrset(query.additional, dns.name.root, 65535, dns.rdatatype.OPT, create=True, force_unique=True)
         return query
 
     @staticmethod

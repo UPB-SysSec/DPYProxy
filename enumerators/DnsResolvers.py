@@ -1,5 +1,6 @@
 from enum import Enum
 
+
 class DnsResolvers(Enum):
     """
     Ip addresses of public DNS resolvers.
@@ -87,7 +88,7 @@ class DnsResolvers(Enum):
         obj = object.__new__(cls)
         obj._value_ = ip  # The actual enum value is the IP address
         obj.hostname = hostname  # Store hostname
-        obj.path = path # Store path
+        obj.path = path  # Store path
         return obj
 
     def __str__(self):
@@ -98,39 +99,43 @@ class DnsResolvers(Enum):
         Returns true if we consider the DNS server to be default. DpyProxy favors "default" DNS resolvers in its AUTO
         selection mode.
         """
-        return self in [DnsResolvers.ADGUARD_UNFILTERED_1,
-                        DnsResolvers.ADGUARD_UNFILTERED_2,
-                        DnsResolvers.CLOUDFLARE_1,
-                        DnsResolvers.CLOUDFLARE_2,
-                        DnsResolvers.GOOGLE_1,
-                        DnsResolvers.GOOGLE_2,
-                        DnsResolvers.G_CORE_1,
-                        DnsResolvers.G_CORE_2,
-                        DnsResolvers.MULLVAD,
-                        DnsResolvers.CISCO_1,
-                        DnsResolvers.CISCO_2,
-                        DnsResolvers.QUAD_9_UNSECURED_1,
-                        DnsResolvers.QUAD_9_UNSECURED_2,
-                        DnsResolvers.YANDEX_1,
-                        DnsResolvers.YANDEX_2,
-                        DnsResolvers.NEXTDNS_1,
-                        DnsResolvers.NEXTDNS_2,
-                        DnsResolvers.CISCO_CHROMIUM]
+        return self in [
+            DnsResolvers.ADGUARD_UNFILTERED_1,
+            DnsResolvers.ADGUARD_UNFILTERED_2,
+            DnsResolvers.CLOUDFLARE_1,
+            DnsResolvers.CLOUDFLARE_2,
+            DnsResolvers.GOOGLE_1,
+            DnsResolvers.GOOGLE_2,
+            DnsResolvers.G_CORE_1,
+            DnsResolvers.G_CORE_2,
+            DnsResolvers.MULLVAD,
+            DnsResolvers.CISCO_1,
+            DnsResolvers.CISCO_2,
+            DnsResolvers.QUAD_9_UNSECURED_1,
+            DnsResolvers.QUAD_9_UNSECURED_2,
+            DnsResolvers.YANDEX_1,
+            DnsResolvers.YANDEX_2,
+            DnsResolvers.NEXTDNS_1,
+            DnsResolvers.NEXTDNS_2,
+            DnsResolvers.CISCO_CHROMIUM,
+        ]
 
     def is_family(self):
         """
         Returns true if the resolver filters content it considers adult. DpyProxy favors resolvers that do not apply
         family filters in its AUTO selection mode.
         """
-        return self in [DnsResolvers.ADGUARD_FAMILY_1,
-                        DnsResolvers.ADGUARD_FAMILY_2,
-                        DnsResolvers.CLEAN_BROWSING_FAMILY_1,
-                        DnsResolvers.CLEAN_BROWSING_FAMILY_1,
-                        DnsResolvers.CLOUDFLARE_FAMILY_1,
-                        DnsResolvers.CLOUDFLARE_FAMILY_2,
-                        DnsResolvers.MULLVAD_FAMILY,
-                        DnsResolvers.MULLVAD_ALL,
-                        DnsResolvers.CISCO_FAMILY_1,
-                        DnsResolvers.CISCO_FAMILY_2,
-                        DnsResolvers.YANDEX_FAMILY_1,
-                        DnsResolvers.YANDEX_FAMILY_2]
+        return self in [
+            DnsResolvers.ADGUARD_FAMILY_1,
+            DnsResolvers.ADGUARD_FAMILY_2,
+            DnsResolvers.CLEAN_BROWSING_FAMILY_1,
+            DnsResolvers.CLEAN_BROWSING_FAMILY_1,
+            DnsResolvers.CLOUDFLARE_FAMILY_1,
+            DnsResolvers.CLOUDFLARE_FAMILY_2,
+            DnsResolvers.MULLVAD_FAMILY,
+            DnsResolvers.MULLVAD_ALL,
+            DnsResolvers.CISCO_FAMILY_1,
+            DnsResolvers.CISCO_FAMILY_2,
+            DnsResolvers.YANDEX_FAMILY_1,
+            DnsResolvers.YANDEX_FAMILY_2,
+        ]

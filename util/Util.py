@@ -17,6 +17,7 @@ def is_valid_ipv4_address(ip_address: str) -> bool:
     except socket.error:
         return False
 
+
 def parse_all_ips(answer: dns.message.Message) -> list[str]:
     resolved_ips = []
     _name = ""
@@ -51,8 +52,11 @@ def parse_all_ips(answer: dns.message.Message) -> list[str]:
                         continue
             except Exception as e:
                 logging.error(
-                f"Could not extract IP from DNS response with exception {e}:\n{_name}, {_rdclass}, {_rdtype}; {answer.answer}")
+                    f"Could not extract IP from DNS response with exception {e}:\n{_name}, {_rdclass}, {_rdtype}; "
+                    f"{answer.answer}"
+                )
         else:
             logging.error(
-                f"Could not extract IP from DNS response with exception {e}:\n{_name}, {_rdclass}, {_rdtype}; None")
+                f"Could not extract IP from DNS response with exception {e}:\n{_name}, {_rdclass}, {_rdtype}; None"
+            )
     return resolved_ips

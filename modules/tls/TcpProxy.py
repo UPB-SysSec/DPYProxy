@@ -14,17 +14,21 @@ class TcpProxy:
     """
     Proxy server
     """
-    def __init__(self, address: NetworkAddress,
-                 timeout: int = 120,
-                 record_version: str = TlsVersion.DEFAULT.value,
-                 record_frag: bool = False,
-                 tcp_frag: bool = False,
-                 frag_size: int = 20,
-                 dns_server: NetworkAddress = None,
-                 disabled_modes: list[TcpProxyMode] = None,
-                 forward_proxy: NetworkAddress = None,
-                 forward_proxy_mode: TcpProxyMode = TcpProxyMode.HTTPS,
-                 forward_proxy_resolve_address: bool = False):
+
+    def __init__(
+        self,
+        address: NetworkAddress,
+        timeout: int = 120,
+        record_version: str = TlsVersion.DEFAULT.value,
+        record_frag: bool = False,
+        tcp_frag: bool = False,
+        frag_size: int = 20,
+        dns_server: NetworkAddress = None,
+        disabled_modes: list[TcpProxyMode] = None,
+        forward_proxy: NetworkAddress = None,
+        forward_proxy_mode: TcpProxyMode = TcpProxyMode.HTTPS,
+        forward_proxy_resolve_address: bool = False,
+    ):
         # timeout for socket reads and message reception
         self.timeout = timeout
         # own port
@@ -48,7 +52,6 @@ class TcpProxy:
         self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.continue_processing = True
 
-
     def handle(self, client_socket: WrappedTcpSocket, address: NetworkAddress):
         return TcpConnectionHandler(
             client_socket,
@@ -62,7 +65,7 @@ class TcpProxy:
             self.disabled_modes,
             self.forward_proxy,
             self.forward_proxy_mode,
-            self.forward_proxy_resolve_address
+            self.forward_proxy_resolve_address,
         ).handle()
 
     def start(self):

@@ -5,16 +5,15 @@ name: Python application
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 permissions:
   contents: read
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
     steps:
@@ -30,3 +29,9 @@ jobs:
     - name: Run tests
       run: |
         hatch test --cover -vv test
+    - name: Run Ruff Linter and Formatter
+      run: |
+        # Checks for logic/styling bugs
+        hatch run ruff check .
+        # Verifies formatting compliance without writing changes
+        hatch run ruff format --check .

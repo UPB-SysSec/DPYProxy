@@ -5,8 +5,9 @@ class TlsVersion(Enum):
     """
     Various TLS versions that can be used to overwrite the TLS version in the TLS record.
     """
+
     DEFAULT = "XXXX"
-    TLS10 = "0301",
+    TLS10 = "0301"
     TLS11 = "0302"
     TLS12 = "0303"
     TLS13_DRAFT_28 = "7F1C"
@@ -17,4 +18,4 @@ class TlsVersion(Enum):
     INVALID_BIGGER = "2020"
 
     def __str__(self):
-        return f'{self.name}: {self.value}'
+        return f"{self.name}: {self.value}"

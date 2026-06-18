@@ -27,18 +27,19 @@ class Module(ABC):
         """
 
     @abstractmethod
-    def start(self, ):
+    def start(
+        self,
+    ):
         """
         Starts the module. Without calling this function the module should not do anything. Should only be called after
         registering and extracting the module's CLI parameters.
         """
         pass
 
-
     @abstractmethod
     def stop(self):
         """
-        Stops the module from accepting any future connections. Running connections are continued. Does nothing if the module has
-        not been started before.
+        Stops the module from accepting any future connections. Running connections are continued.
+        Does nothing if the module has not been started before.
         """
         pass

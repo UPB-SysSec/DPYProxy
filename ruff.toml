@@ -1,0 +1,14 @@
+# Target Python version
+target-version = "py312"
+
+# Only include these patterns for linting
+include = ["*.py"]
+
+# Set the maximum line length
+line-length = 120
+
+# Enable specific rule sets (E: pycodestyle, F: Pyflakes, I: Isort)
+lint.select = ["E", "F", "I"]
+
+# Never enforce these rules
+lint.ignore = []

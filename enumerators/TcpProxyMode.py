@@ -5,8 +5,9 @@ class TcpProxyMode(Enum):
     """
     Modes the proxy can operate in
     """
+
     HTTP = "HTTP"
-    HTTPS = "HTTPS",
+    HTTPS = "HTTPS"
     SNI = "SNI"
     SOCKSv4 = "SOCKSv4"
     SOCKSv4a = "SOCKSv4a"

@@ -7,8 +7,20 @@ import dns
 import httpx
 from dns.exception import Timeout
 from dns.message import Message
-from dns.query import tls, tcp, quic, udp, send_udp, receive_udp, _destination_and_source, _HTTPTransport, BadResponse, \
-    _compute_times, _remaining, _check_status
+from dns.query import (
+    BadResponse,
+    _check_status,
+    _compute_times,
+    _destination_and_source,
+    _HTTPTransport,
+    _remaining,
+    quic,
+    receive_udp,
+    send_udp,
+    tcp,
+    tls,
+    udp,
+)
 
 from enumerators.DnsProxyMode import DnsProxyMode
 from exception.DnsException import DnsException
@@ -22,33 +34,39 @@ def fix_transaction_id(f):
     Fixes the transaction id for upgraded DNS requests. DoQ specifies and DoH recommends setting the transaction id to 0
     https://www.rfc-editor.org/rfc/rfc9250.html#section-4.2.1
     """
+
     def _inner(message, *args, **kwargs):
         _id = message.id
         # dnspython replaces message.id with 0 in this call
         answer = f(message, *args, **kwargs)
         answer.id = _id
         return answer
+
     return _inner
+
 
 class DomainResolver:
     """
     Resolves domains to ip addresses. Can use DNS over TLS, DNS over DoQ, DNS over UDP, DNS over TCP, DNS over TCP with
     TCP fragmentation, and a China-specific mode that circumvents.
-    Offers static methods and non-static methods for specifiable and non-specifiable DNS resolvers and timeouts respectively.
+    Offers static methods and non-static methods for specifiable and non-specifiable DNS resolvers and timeouts
+    respectively.
     """
 
     DNS_TCP_FRAG_SIZE = 20
     THRESHOLD_CONFIRM_WORKING = 3
     TRIES_CONFIRM_WORKING = 5
 
-    def __init__(self,
-                 dns_mode: DnsProxyMode,
-                 resolver: NetworkAddress,
-                 timeout: int,
-                 hostname: str,
-                 tcp_frag_size: int = DNS_TCP_FRAG_SIZE,
-                 add_sni: bool = True,
-                 path: str = "/dns-query"):
+    def __init__(
+        self,
+        dns_mode: DnsProxyMode,
+        resolver: NetworkAddress,
+        timeout: int,
+        hostname: str,
+        tcp_frag_size: int = DNS_TCP_FRAG_SIZE,
+        add_sni: bool = True,
+        path: str = "/dns-query",
+    ):
         self.dns_mode = dns_mode
         self.resolver = resolver
         self.timeout = timeout
@@ -65,7 +83,7 @@ class DomainResolver:
             "hostname": self.hostname,
             "tcp_frag_size": self.tcp_frag_size,
             "add_sni": self.add_sni,
-            "path": self.path
+            "path": self.path,
         }
 
     @staticmethod
@@ -77,7 +95,7 @@ class DomainResolver:
             hostname=data["hostname"],
             tcp_frag_size=data["tcp_frag_size"],
             add_sni=data["add_sni"],
-            path=data["path"]
+            path=data["path"],
         )
 
     @staticmethod
@@ -89,7 +107,9 @@ class DomainResolver:
 
     @staticmethod
     @fix_transaction_id
-    def resolve_dot_static(message: Message, resolver: NetworkAddress, timeout: int, hostname:str, add_sni:bool = True) -> Message:
+    def resolve_dot_static(
+        message: Message, resolver: NetworkAddress, timeout: int, hostname: str, add_sni: bool = True
+    ) -> Message:
         """
         Resolves the given domain to an ip address using DNS over TLS on the given DNS resolver.
         :param message: the DNS message to resolve
@@ -100,13 +120,22 @@ class DomainResolver:
         :return: The Dns response by the resolver
         """
         if add_sni:
-            return tls(message, where=resolver.host, port=resolver.port, timeout=timeout, server_hostname=hostname, verify=True)
+            return tls(
+                message, where=resolver.host, port=resolver.port, timeout=timeout, server_hostname=hostname, verify=True
+            )
         else:
             return tls(message, where=resolver.host, port=resolver.port, timeout=timeout, verify=False)
 
     @staticmethod
     @fix_transaction_id
-    def resolve_doh_static(message: Message, resolver: NetworkAddress, timeout: int, hostname: str, add_sni:bool = True, path:str = "/dns-query") -> Message:
+    def resolve_doh_static(
+        message: Message,
+        resolver: NetworkAddress,
+        timeout: int,
+        hostname: str,
+        add_sni: bool = True,
+        path: str = "/dns-query",
+    ) -> Message:
         """
         Resolves the given domain to an ip address using DNS over HTTPS on the given DNS resolver.
         :param message: the DNS message to resolve
@@ -119,11 +148,9 @@ class DomainResolver:
         """
         # Reused code from dnypython's https function below
 
-        url=f"https://{resolver.host}:{resolver.port}{path}"
+        url = f"https://{resolver.host}:{resolver.port}{path}"
 
-        (_, _, the_source) = _destination_and_source(
-            resolver.host, resolver.port, None, 0, False
-        )
+        (_, _, the_source) = _destination_and_source(resolver.host, resolver.port, None, 0, False)
 
         extensions = {}
         bootstrap_address = resolver.host
@@ -192,7 +219,14 @@ class DomainResolver:
 
     @staticmethod
     @fix_transaction_id
-    def resolve_doh3_static(message: Message, resolver: NetworkAddress, timeout: int, hostname:str, add_sni:bool = True, path:str = "/dns-query") -> Message:
+    def resolve_doh3_static(
+        message: Message,
+        resolver: NetworkAddress,
+        timeout: int,
+        hostname: str,
+        add_sni: bool = True,
+        path: str = "/dns-query",
+    ) -> Message:
         """
         Resolves the given domain to an ip address using DNS over HTTP3 on the given DNS resolver.
         :param message: the DNS message to resolve
@@ -213,13 +247,9 @@ class DomainResolver:
         wire = q.to_wire()
 
         if add_sni:
-            manager = dns.quic.SyncQuicManager(
-                verify_mode=True, server_name=hostname, h3=True
-            )
+            manager = dns.quic.SyncQuicManager(verify_mode=True, server_name=hostname, h3=True)
         else:
-            manager = dns.quic.SyncQuicManager(
-                verify_mode=False, server_name=None, h3=True
-            )
+            manager = dns.quic.SyncQuicManager(verify_mode=False, server_name=None, h3=True)
 
         with manager:
             connection = manager.connect(where, resolver.port, None, 0)
@@ -244,7 +274,9 @@ class DomainResolver:
 
     @staticmethod
     @fix_transaction_id
-    def resolve_doq_static(message: Message, resolver: NetworkAddress, timeout: int, hostname: str, add_sni:bool = True) -> Message:
+    def resolve_doq_static(
+        message: Message, resolver: NetworkAddress, timeout: int, hostname: str, add_sni: bool = True
+    ) -> Message:
         """
         Resolves the given domain to an ip address using DNS over QUIC on the given DNS resolver.
         :param message: the DNS message to resolve
@@ -255,7 +287,15 @@ class DomainResolver:
         :return: The Dns response by the resolver
         """
         if add_sni:
-            return quic(message, where=resolver.host, port=resolver.port, timeout=timeout, server_hostname=hostname, hostname=hostname, verify=True)
+            return quic(
+                message,
+                where=resolver.host,
+                port=resolver.port,
+                timeout=timeout,
+                server_hostname=hostname,
+                hostname=hostname,
+                verify=True,
+            )
         else:
             return quic(message, where=resolver.host, port=resolver.port, timeout=timeout, verify=False)
 
@@ -285,7 +325,7 @@ class DomainResolver:
         :return: The Dns response by the resolver
         """
 
-        return udp(message, where=resolver.host, port=resolver.port, timeout = timeout)
+        return udp(message, where=resolver.host, port=resolver.port, timeout=timeout)
 
     @staticmethod
     def resolve_tcp_static(message: Message, resolver: NetworkAddress, timeout: int) -> Message:
@@ -312,12 +352,12 @@ class DomainResolver:
         """
         # create fragmenting tcp socket and pass to dnspython
         try:
-            _socket = socket.create_connection((resolver.host, resolver.port), timeout = timeout)
+            _socket = socket.create_connection((resolver.host, resolver.port), timeout=timeout)
         except Exception as e:
             raise DnsException(e)
 
-        frag_socket = WrappedTcpSocket(timeout = timeout, _socket = _socket, tcp_frag_size=frag_size)
-        return tcp(message, where=resolver.host, sock=frag_socket, timeout = timeout)
+        frag_socket = WrappedTcpSocket(timeout=timeout, _socket=_socket, tcp_frag_size=frag_size)
+        return tcp(message, where=resolver.host, sock=frag_socket, timeout=timeout)
 
     @staticmethod
     def resolve_last_response_static(message: Message, resolver: NetworkAddress, timeout: int) -> Message:
@@ -334,18 +374,27 @@ class DomainResolver:
         _socket.setblocking(False)
         _address = (resolver.host, resolver.port)
         # send message to server
-        send_udp(sock = _socket, what = message, destination=_address, expiration=time.time()+timeout)
+        send_udp(sock=_socket, what=message, destination=_address, expiration=time.time() + timeout)
         last_received = None
         stop_time = time.time() + timeout
         while True:
             try:
-                last_received, _ = receive_udp(sock = _socket, destination=_address, expiration=stop_time)
+                last_received, _ = receive_udp(sock=_socket, destination=_address, expiration=stop_time)
             except Timeout:
                 break
         return last_received
 
     @staticmethod
-    def resolve_static(mode: DnsProxyMode, message: Message, resolver: NetworkAddress, timeout: int, frag_size: int=DNS_TCP_FRAG_SIZE, hostname: str="", add_sni:bool = True, path:str = "/dns-query") -> Message:
+    def resolve_static(
+        mode: DnsProxyMode,
+        message: Message,
+        resolver: NetworkAddress,
+        timeout: int,
+        frag_size: int = DNS_TCP_FRAG_SIZE,
+        hostname: str = "",
+        add_sni: bool = True,
+        path: str = "/dns-query",
+    ) -> Message:
         """
         Resolves the requested message based on the selected mode.
         :param mode: the DNS proxy mode to use. Must not be AUTO, will raise a DnsException
@@ -360,19 +409,29 @@ class DomainResolver:
         if mode == DnsProxyMode.AUTO:
             raise DnsException("No resolution function for mode AUTO")
         elif mode == DnsProxyMode.DOT:
-            return DomainResolver.resolve_dot_static(message, resolver=resolver, timeout=timeout, hostname=hostname, add_sni=add_sni)
+            return DomainResolver.resolve_dot_static(
+                message, resolver=resolver, timeout=timeout, hostname=hostname, add_sni=add_sni
+            )
         elif mode == DnsProxyMode.DOH:
-            return DomainResolver.resolve_doh_static(message, resolver=resolver, timeout=timeout, hostname=hostname, add_sni=add_sni, path=path)
+            return DomainResolver.resolve_doh_static(
+                message, resolver=resolver, timeout=timeout, hostname=hostname, add_sni=add_sni, path=path
+            )
         elif mode == DnsProxyMode.DOH3:
-            return DomainResolver.resolve_doh3_static(message, resolver=resolver, timeout=timeout, hostname=hostname, add_sni=add_sni, path=path)
+            return DomainResolver.resolve_doh3_static(
+                message, resolver=resolver, timeout=timeout, hostname=hostname, add_sni=add_sni, path=path
+            )
         elif mode == DnsProxyMode.DOQ:
-            return DomainResolver.resolve_doq_static(message, resolver=resolver, timeout=timeout, hostname=hostname, add_sni=add_sni)
+            return DomainResolver.resolve_doq_static(
+                message, resolver=resolver, timeout=timeout, hostname=hostname, add_sni=add_sni
+            )
         elif mode == DnsProxyMode.UDP:
             return DomainResolver.resolve_udp_static(message, resolver=resolver, timeout=timeout)
         elif mode == DnsProxyMode.TCP:
             return DomainResolver.resolve_tcp_static(message, resolver=resolver, timeout=timeout)
         elif mode == DnsProxyMode.TCP_FRAG:
-            return DomainResolver.resolve_tcp_frag_static(message, resolver=resolver, timeout=timeout, frag_size=frag_size)
+            return DomainResolver.resolve_tcp_frag_static(
+                message, resolver=resolver, timeout=timeout, frag_size=frag_size
+            )
         elif mode == DnsProxyMode.LAST_RESPONSE:
             return DomainResolver.resolve_last_response_static(message, resolver=resolver, timeout=timeout)
         else:
@@ -383,7 +442,16 @@ class DomainResolver:
         Resolves the given DNS message using the configured mode on the configured provider using the configured
         timeout and frag size.
         """
-        return DomainResolver.resolve_static(mode=self.dns_mode, message=message, resolver=self.resolver, timeout=self.timeout, frag_size=self.tcp_frag_size, hostname=self.hostname, add_sni= self.add_sni, path=self.path)
+        return DomainResolver.resolve_static(
+            mode=self.dns_mode,
+            message=message,
+            resolver=self.resolver,
+            timeout=self.timeout,
+            frag_size=self.tcp_frag_size,
+            hostname=self.hostname,
+            add_sni=self.add_sni,
+            path=self.path,
+        )
 
     def works(self, message: Message) -> bool:
         """

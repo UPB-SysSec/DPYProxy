@@ -12,11 +12,11 @@ class Socksv5:
     Implements SOCKSv5 protocol, only supports no auth
     """
 
-    REQUEST_MODE = b'\x01'
-    BIND_MODE = b'\x02'
-    UDP_PORT = b'\x03'
-    RESERVED_BYTE = b'\x00'
-    NO_AUTH = b'\x00'
+    REQUEST_MODE = b"\x01"
+    BIND_MODE = b"\x02"
+    UDP_PORT = b"\x03"
+    RESERVED_BYTE = b"\x00"
+    NO_AUTH = b"\x00"
 
     @staticmethod
     def read_socks5(connection_socket: WrappedTcpSocket) -> tuple[str, int]:
@@ -26,14 +26,14 @@ class Socksv5:
         if version != SOCKSv5_HEADER:
             raise ParserException("Not a SOCKSv5 request")
 
-        number_authentication_methods = int.from_bytes(connection_socket.recv(1), byteorder='big')
+        number_authentication_methods = int.from_bytes(connection_socket.recv(1), byteorder="big")
         if number_authentication_methods == 0:
-            connection_socket.send(SOCKSv5_HEADER + b'\xFF')
+            connection_socket.send(SOCKSv5_HEADER + b"\xff")
             raise ParserException("No auth method provided")
 
         authentication_methods = connection_socket.read(number_authentication_methods)
         if Socksv5.NO_AUTH not in authentication_methods:
-            connection_socket.send(SOCKSv5_HEADER + b'\xFF')
+            connection_socket.send(SOCKSv5_HEADER + b"\xff")
             raise ParserException("No auth method not supported by client")
 
         # always choose no auth
@@ -57,7 +57,7 @@ class Socksv5:
 
         host = Socksv5._read_address(connection_socket)
 
-        port = int.from_bytes(connection_socket.read(2), byteorder='big')
+        port = int.from_bytes(connection_socket.read(2), byteorder="big")
         if not 0 <= port <= 65535:
             raise ParserException(f"Invalid port {port}")
 
@@ -66,36 +66,41 @@ class Socksv5:
     @staticmethod
     def _read_address(connection_socket: WrappedTcpSocket) -> str:
         address_type = connection_socket.recv(1)
-        if address_type == b'\x01':
+        if address_type == b"\x01":
             # ipv4
-            host = '.'.join(f'{c}' for c in connection_socket.read(4))
-        elif address_type == b'\x04':
+            host = ".".join(f"{c}" for c in connection_socket.read(4))
+        elif address_type == b"\x04":
             # ipv6
-            host = ':'.join(f'{c}' for c in connection_socket.read(16))
-        elif address_type == b'\x03':
+            host = ":".join(f"{c}" for c in connection_socket.read(16))
+        elif address_type == b"\x03":
             # domain
-            length = int.from_bytes(connection_socket.read(1), byteorder='big')
-            host = connection_socket.read(length).decode('utf-8')
+            length = int.from_bytes(connection_socket.read(1), byteorder="big")
+            host = connection_socket.read(length).decode("utf-8")
         else:
             raise ParserException(f"Address type {address_type} not supported")
         return host
 
     @staticmethod
     def socks5_auth_methods() -> bytes:
-        return SOCKSv5_HEADER + b'\x01' + Socksv5.NO_AUTH
+        return SOCKSv5_HEADER + b"\x01" + Socksv5.NO_AUTH
 
     @staticmethod
     def socks5_request(server_address: NetworkAddress):
         if not is_valid_ipv4_address(server_address.host):
-            domain = server_address.host.encode('utf-8')
-            address = b'\x03' + len(domain).to_bytes() + domain
+            domain = server_address.host.encode("utf-8")
+            address = b"\x03" + len(domain).to_bytes() + domain
         else:
-            address = b'\x01' + socket.inet_aton(server_address.host)
-        return (SOCKSv5_HEADER + b'\x01' + Socksv5.RESERVED_BYTE + address
-                + server_address.port.to_bytes(2, byteorder='big'))
+            address = b"\x01" + socket.inet_aton(server_address.host)
+        return (
+            SOCKSv5_HEADER
+            + b"\x01"
+            + Socksv5.RESERVED_BYTE
+            + address
+            + server_address.port.to_bytes(2, byteorder="big")
+        )
 
     @staticmethod
     def socks5_ok(connection_socket: WrappedTcpSocket) -> bytes:
         host_ip, host_port = connection_socket.socket.getsockname()
-        host_address = b'\x01' + socket.inet_aton(host_ip)
-        return SOCKSv5_HEADER + b'\x00' + Socksv5.RESERVED_BYTE + host_address + host_port.to_bytes(2, byteorder='big')
+        host_address = b"\x01" + socket.inet_aton(host_ip)
+        return SOCKSv5_HEADER + b"\x00" + Socksv5.RESERVED_BYTE + host_address + host_port.to_bytes(2, byteorder="big")

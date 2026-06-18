@@ -17,7 +17,7 @@ class Http:
         method = method.upper()
         try:
             # read complete message
-            message = wrapped_socket.read_until([b'\n\n', b'\r\n\r\n'], 500, peek).decode('ASCII')
+            message = wrapped_socket.read_until([b"\n\n", b"\r\n\r\n"], 500, peek).decode("ASCII")
             # extract first line, assume that \r\n are at least used coherently in the message
             if "\r\n" in message:
                 first_line = message.split("\r\n")[0]
@@ -25,7 +25,7 @@ class Http:
                 first_line = message.split("\n")[0]
         except UnicodeDecodeError as e:
             raise ParserException(f"Could not decode ASCII in first line of HTTP {method} request with exception {e}")
-        if not first_line.upper().startswith(f'{method} '):
+        if not first_line.upper().startswith(f"{method} "):
             raise ParserException(f"Not a {method} request")
         if first_line.count(" ") != 2:
             raise ParserException(f"Not a valid {method} request, could not determine target URI")
@@ -81,10 +81,11 @@ class Http:
 
     @staticmethod
     def connect_message(server_address: NetworkAddress, version: str) -> bytes:
-        return (f'CONNECT {server_address.host}:{server_address.port} {version}\n'
-                f'Host: {server_address.host}:{server_address.port}\n\n'
-                .encode('ASCII'))
+        return (
+            f"CONNECT {server_address.host}:{server_address.port} {version}\n"
+            f"Host: {server_address.host}:{server_address.port}\n\n".encode("ASCII")
+        )
 
     @staticmethod
     def http_200_ok(version: str) -> bytes:
-        return f'{version} 200 OK\n\n'.encode("ASCII")
+        return f"{version} 200 OK\n\n".encode("ASCII")

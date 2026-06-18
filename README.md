@@ -207,3 +207,7 @@ functionality of DPYProxy is currently limited. Below, I gathered some potential
 - [ ] HTTP shenanigans
 - [ ] unit tests...
 - [ ] IPv6
+
+## Maintainance
+- Run `ruff check --fix` to fix the auto fixable lint issues.
+- Run `ruff format .` to pretty the code. Few could need a manual effort.

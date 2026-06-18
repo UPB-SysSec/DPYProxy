@@ -9,6 +9,7 @@ class Modules(Enum):
     """
     All optional modules the proxy supports
     """
+
     TLS = "TLS"
     DNS = "DNS"
 

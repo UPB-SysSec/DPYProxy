@@ -12,9 +12,15 @@ from network.protocols.Socksv5 import Socksv5
 from network.protocols.Tls import Tls
 from network.tcp.Forwarder import Forwarder
 from network.tcp.WrappedTcpSocket import WrappedTcpSocket
+from util.constants import (
+    STANDARD_SOCKET_RECEIVE_SIZE,
+    TLS_1_0_HEADER,
+    TLS_1_1_HEADER,
+    TLS_1_2_HEADER,
+    SOCKSv4_HEADER,
+    SOCKSv5_HEADER,
+)
 from util.Util import is_valid_ipv4_address
-from util.constants import STANDARD_SOCKET_RECEIVE_SIZE, TLS_1_0_HEADER, TLS_1_2_HEADER, \
-    TLS_1_1_HEADER, SOCKSv4_HEADER, SOCKSv5_HEADER
 
 
 class TcpConnectionHandler:
@@ -22,19 +28,21 @@ class TcpConnectionHandler:
     Handles a single client connection of the proxy server.
     """
 
-    def __init__(self,
-                 connection_socket: WrappedTcpSocket,
-                 address: NetworkAddress,
-                 timeout: int,
-                 record_version: str,
-                 record_frag: bool,
-                 tcp_frag: bool,
-                 frag_size: int,
-                 dns_server: NetworkAddress,
-                 disabled_modes: list[TcpProxyMode],
-                 forward_proxy: NetworkAddress,
-                 forward_proxy_mode: TcpProxyMode,
-                 forward_proxy_resolve_address: bool):
+    def __init__(
+        self,
+        connection_socket: WrappedTcpSocket,
+        address: NetworkAddress,
+        timeout: int,
+        record_version: str,
+        record_frag: bool,
+        tcp_frag: bool,
+        frag_size: int,
+        dns_server: NetworkAddress,
+        disabled_modes: list[TcpProxyMode],
+        forward_proxy: NetworkAddress,
+        forward_proxy_mode: TcpProxyMode,
+        forward_proxy_resolve_address: bool,
+    ):
         self.connection_socket = connection_socket
         self.address = address
         self.proxy_mode = None
@@ -68,10 +76,13 @@ class TcpConnectionHandler:
             return
 
         # resolve domain if no forward proxy or the forward proxy needs a resolved address
-        if (not is_valid_ipv4_address(final_server_address.host)) and \
-                (self.forward_proxy_resolve_address or self.forward_proxy is None):
+        if (not is_valid_ipv4_address(final_server_address.host)) and (
+            self.forward_proxy_resolve_address or self.forward_proxy is None
+        ):
             if self.dns_server:
-                host = DomainResolver.resolve_udp_static_to_ip(final_server_address.host, resolver=self.dns_server, timeout=self.timeout)
+                host = DomainResolver.resolve_udp_static_to_ip(
+                    final_server_address.host, resolver=self.dns_server, timeout=self.timeout
+                )
             else:
                 host = DomainResolver.resolve_local(final_server_address.host)
             self.debug(f"Resolved {host} from {final_server_address.host}")
@@ -98,8 +109,10 @@ class TcpConnectionHandler:
             server_socket = WrappedTcpSocket(self.timeout, server_socket, self.frag_size)
         else:
             server_socket = WrappedTcpSocket(self.timeout, server_socket)
-        logging.info(f"Connected {final_server_address.host}:{final_server_address.port} "
-                     f"to {target_address[0]}:{target_address[1]}")
+        logging.info(
+            f"Connected {final_server_address.host}:{final_server_address.port} "
+            f"to {target_address[0]}:{target_address[1]}"
+        )
 
         self.send_proxy_answer(http_version, server_socket)
 
@@ -107,9 +120,15 @@ class TcpConnectionHandler:
             self.connect_forward_proxy(server_socket, final_server_address, http_version)
 
         # start proxying
-        Forwarder(self.connection_socket, self.address.__str__(), server_socket,
-                  f"{target_address[0]}:{target_address[1]}", self.record_frag, self.record_version,
-                  self.frag_size).start()
+        Forwarder(
+            self.connection_socket,
+            self.address.__str__(),
+            server_socket,
+            f"{target_address[0]}:{target_address[1]}",
+            self.record_frag,
+            self.record_version,
+            self.frag_size,
+        ).start()
 
     def get_proxy_mode(self) -> TcpProxyMode:
         """
@@ -117,8 +136,7 @@ class TcpConnectionHandler:
         """
         header = self.connection_socket.peek(3)
 
-        if header.startswith(TLS_1_0_HEADER) or header.startswith(TLS_1_1_HEADER) \
-                or header.startswith(TLS_1_2_HEADER):
+        if header.startswith(TLS_1_0_HEADER) or header.startswith(TLS_1_1_HEADER) or header.startswith(TLS_1_2_HEADER):
             self.debug("Determined SNI Proxy Request")
             return TcpProxyMode.SNI
 
@@ -131,11 +149,11 @@ class TcpConnectionHandler:
             return TcpProxyMode.SOCKSv5
 
         try:
-            ascii_decoded_header = header.decode('ASCII')
-        except UnicodeDecodeError as e:
+            ascii_decoded_header = header.decode("ASCII")
+        except UnicodeDecodeError:
             raise ParserException(f"Could not determine message type of message {header}")
         else:
-            if ascii_decoded_header.upper().startswith('CON'):
+            if ascii_decoded_header.upper().startswith("CON"):
                 self.debug("Determined HTTPS Proxy Request")
                 return TcpProxyMode.HTTPS
             else:
@@ -182,14 +200,14 @@ class TcpConnectionHandler:
             # answer with Socksv5 okay
             self.connection_socket.send(Socksv5.socks5_ok(server_socket))
 
-    def connect_forward_proxy(self, server_socket: WrappedTcpSocket,
-                              final_server_address: NetworkAddress,
-                              http_version: str):
+    def connect_forward_proxy(
+        self, server_socket: WrappedTcpSocket, final_server_address: NetworkAddress, http_version: str
+    ):
         try:
             # send proxy messages if necessary
             if self.forward_proxy_mode == TcpProxyMode.HTTPS:
                 server_socket.send(Http.connect_message(final_server_address, http_version))
-                self.debug(f"Sent HTTP CONNECT to forward proxy")
+                self.debug("Sent HTTP CONNECT to forward proxy")
                 # receive HTTP 200 OK
                 answer = server_socket.recv(STANDARD_SOCKET_RECEIVE_SIZE)
                 if not answer.upper().startswith(Http.http_200_ok(http_version)):
@@ -197,7 +215,7 @@ class TcpConnectionHandler:
 
             elif self.forward_proxy == TcpProxyMode.SOCKSv4:
                 server_socket.send(Socksv4.socks4_request(final_server_address))
-                self.debug(f"Sent SOCKSv4 to forward proxy")
+                self.debug("Sent SOCKSv4 to forward proxy")
                 # receive SOCKSv4 OK
                 answer = server_socket.recv(STANDARD_SOCKET_RECEIVE_SIZE)
                 if not answer.upper().startswith(Socksv4.socks4_ok()) and len(answer) != 8:
@@ -207,20 +225,20 @@ class TcpConnectionHandler:
                 server_socket.send(Socksv5.socks5_auth_methods())
                 self.debug("Sent SOCKSv5 auth methods")
                 answer = server_socket.recv(2)
-                if answer == b'\x05\xFF':
+                if answer == b"\x05\xff":
                     raise ParserException("Forward proxy does not support no auth")
-                if answer != b'\x05\x00':
+                if answer != b"\x05\x00":
                     raise ParserException(f"Forward proxy rejected the connection with {answer}")
                 server_socket.send(Socksv5.socks5_request(final_server_address))
-                self.debug(f"Sent SOCKSv5 to forward proxy")
+                self.debug("Sent SOCKSv5 to forward proxy")
                 # receive SOCKSv5 OK
                 answer = server_socket.recv(STANDARD_SOCKET_RECEIVE_SIZE)
                 if not answer.upper().startswith(Socksv5.socks5_ok(server_socket)):
                     self.debug(f"Forward proxy rejected the connection with {answer}")
-        except:
+        except Exception:
             self.debug("Could not send proxy message")
             self.connection_socket.try_close()
-            logging.info(f"Closed connections")
+            logging.info("Closed connections")
             return
 
     # LOGGER utility functions

@@ -21,7 +21,7 @@ class WrappedTcpSocket(WrappedSocket):
             return self.socket.send(data, *args, **kwargs)
         else:
             # split into fragments and send each separately
-            fragments = (data[i:i+self.tcp_frag_size] for i in range(0, len(data), self.tcp_frag_size))
+            fragments = (data[i : i + self.tcp_frag_size] for i in range(0, len(data), self.tcp_frag_size))
             total_sent = 0
             for fragment in fragments:
                 total_sent += self.socket.send(fragment, *args, **kwargs)

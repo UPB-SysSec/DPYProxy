@@ -25,40 +25,43 @@ class DnsProxy:
     Proxy server
     """
 
-    def __init__(self, address: NetworkAddress,
-                 timeout: int,
-                 proxy_mode: DnsProxyMode,
-                 dns_resolver_address: NetworkAddress,
-                 censored_domain: str,
-                 compare_ip_ranges: list[str],
-                 block_page_ips: bool,
-                 add_sni: bool,
-                 skip_working_file: bool):
-                # timeout for socket reads and message reception
-                self.timeout = timeout
-                self.address = address
-                self.resolver_address = dns_resolver_address
-                self.censored_domain = censored_domain
-                self.compare_ip_ranges = compare_ip_ranges
-                self.block_page_ips = block_page_ips
-                self.proxy_mode = proxy_mode
-                self.add_sni = add_sni
-                self.skip_working_file = skip_working_file
+    def __init__(
+        self,
+        address: NetworkAddress,
+        timeout: int,
+        proxy_mode: DnsProxyMode,
+        dns_resolver_address: NetworkAddress,
+        censored_domain: str,
+        compare_ip_ranges: list[str],
+        block_page_ips: bool,
+        add_sni: bool,
+        skip_working_file: bool,
+    ):
+        # timeout for socket reads and message reception
+        self.timeout = timeout
+        self.address = address
+        self.resolver_address = dns_resolver_address
+        self.censored_domain = censored_domain
+        self.compare_ip_ranges = compare_ip_ranges
+        self.block_page_ips = block_page_ips
+        self.proxy_mode = proxy_mode
+        self.add_sni = add_sni
+        self.skip_working_file = skip_working_file
 
-                # initialize UDP and TCP server sockets
-                self.udp_server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                self.udp_server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                self.udp_server.settimeout(timeout)
-                self.tcp_server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                self.tcp_server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                self.udp_server.settimeout(timeout)
-                self.continue_processing = True
+        # initialize UDP and TCP server sockets
+        self.udp_server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.udp_server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.udp_server.settimeout(timeout)
+        self.tcp_server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.tcp_server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.udp_server.settimeout(timeout)
+        self.continue_processing = True
 
-                # initialized in start()
-                self.domain_resolver: DomainResolver|None = None
+        # initialized in start()
+        self.domain_resolver: DomainResolver | None = None
 
-                # for time measurement
-                self.start_time = time.time()
+        # for time measurement
+        self.start_time = time.time()
 
     def handle_udp(self, message: bytes, address: NetworkAddress):
         answer = self.resolve_message(message, address)
@@ -68,7 +71,7 @@ class DnsProxy:
     def handle_tcp(self, client_socket: WrappedTcpSocket, address: NetworkAddress):
         try:
             # read 2-byte length field
-            _len = int.from_bytes(client_socket.read(2), byteorder='big')
+            _len = int.from_bytes(client_socket.read(2), byteorder="big")
             # read following message
             request = client_socket.read(_len)
         except Exception as e:
@@ -78,7 +81,6 @@ class DnsProxy:
             answer = self.resolve_message(request=request, address=address)
             if answer is not None:
                 client_socket.send(answer.to_wire(prepend_length=True))
-
 
     def resolve_message(self, request: bytes, address: NetworkAddress) -> Message | None:
         """
@@ -100,12 +102,16 @@ class DnsProxy:
             answer = self.domain_resolver.resolve(request)
         except Exception as _:
             logging.error(
-                f"{address.host}:{address.port}: Could not query Dns message using mode {self.proxy_mode} with error: {traceback.format_exc()}")
+                f"{address.host}:{address.port}: Could not query Dns message using mode {self.proxy_mode} "
+                f"with error: {traceback.format_exc()}"
+            )
             answer = Dns.make_response(request, orig_id=_id)
             answer.set_rcode(SERVFAIL)
         else:
             logging.debug(
-                f"{address.host}:{address.port}: Successfully resolved Dns message using mode {self.proxy_mode}. Sending answer to client:\n{answer}")
+                f"{address.host}:{address.port}: Successfully resolved Dns message using mode {self.proxy_mode}. "
+                f"Sending answer to client:\n{answer}"
+            )
         return answer
 
     def generate_domain_resolver(self):
@@ -113,36 +119,43 @@ class DnsProxy:
         Generator that yields a new DomainResolver based on the CLI configuration.
         """
         if self.proxy_mode == DnsProxyMode.AUTO:
-            _gen = DnsModeDeterminator(self.timeout, self.censored_domain,
-                                       self.compare_ip_ranges, self.block_page_ips).generate_working_resolver()
+            _gen = DnsModeDeterminator(
+                self.timeout, self.censored_domain, self.compare_ip_ranges, self.block_page_ips
+            ).generate_working_resolver()
             yield from _gen
 
         elif self.resolver_address.host is None:
-            _gen = DnsModeDeterminator(self.timeout, self.censored_domain,
-                                       self.compare_ip_ranges, self.block_page_ips).generate_working_resolver(self.proxy_mode)
+            _gen = DnsModeDeterminator(
+                self.timeout, self.censored_domain, self.compare_ip_ranges, self.block_page_ips
+            ).generate_working_resolver(self.proxy_mode)
             yield from _gen
 
         elif self.resolver_address.port is not None:
             logging.info(
-                f"mode {self.proxy_mode} and resolver {self.resolver_address.host} specified. Setting standard port {self.proxy_mode.default_port()}.")
+                f"mode {self.proxy_mode} and resolver {self.resolver_address.host} specified. Setting standard "
+                f"port {self.proxy_mode.default_port()}."
+            )
             # mode and resolver specified, set standard port accordingly
-            yield DomainResolver(dns_mode=self.proxy_mode,
-                                 resolver=NetworkAddress(self.resolver_address.host,
-                                                         self.proxy_mode.default_port()),
-                                 timeout=self.timeout,
-                                 hostname="",
-                                 add_sni=self.add_sni)
+            yield DomainResolver(
+                dns_mode=self.proxy_mode,
+                resolver=NetworkAddress(self.resolver_address.host, self.proxy_mode.default_port()),
+                timeout=self.timeout,
+                hostname="",
+                add_sni=self.add_sni,
+            )
         else:
             logging.info(
-                f"mode {self.proxy_mode} and resolver {self.resolver_address.host}:{self.resolver_address.port} specified. Using these values.")
+                f"mode {self.proxy_mode} and resolver {self.resolver_address.host}:{self.resolver_address.port} "
+                "specified. Using these values."
+            )
             # mode, resolver, and port specified
-            yield DomainResolver(dns_mode=self.proxy_mode,
-                                 resolver=self.resolver_address,
-                                 timeout=self.timeout,
-                                 hostname="",
-                                 add_sni=self.add_sni)
-
-
+            yield DomainResolver(
+                dns_mode=self.proxy_mode,
+                resolver=self.resolver_address,
+                timeout=self.timeout,
+                hostname="",
+                add_sni=self.add_sni,
+            )
 
     def configure(self):
         """
@@ -165,18 +178,22 @@ class DnsProxy:
             # determine next possible resolver
             try:
                 dns_resolver: DnsResolver = next(domain_resolver_generator)
-                domain_resolver: DomainResolver = DomainResolver(dns_mode=dns_resolver.mode,
-                                                                 resolver=dns_resolver.address,
-                                                                 timeout=self.timeout,
-                                                                 hostname=dns_resolver.hostname,
-                                                                 add_sni=self.add_sni,
-                                                                 path=dns_resolver.path)
+                domain_resolver: DomainResolver = DomainResolver(
+                    dns_mode=dns_resolver.mode,
+                    resolver=dns_resolver.address,
+                    timeout=self.timeout,
+                    hostname=dns_resolver.hostname,
+                    add_sni=self.add_sni,
+                    path=dns_resolver.path,
+                )
             except StopIteration:
                 raise DnsException("No working circumvention method found according to specification in CLI.")
 
             # determine if it is working
-            logging.info(f"Found working circumvention method / resolver {domain_resolver}! Checking if consistently reachable!")
-            found_working  = domain_resolver.works(message=make_query(self.censored_domain, "A"))
+            logging.info(
+                f"Found working circumvention method / resolver {domain_resolver}! Checking if consistently reachable!"
+            )
+            found_working = domain_resolver.works(message=make_query(self.censored_domain, "A"))
             if not found_working:
                 logging.info(f"{domain_resolver} not consistently reachable, attempting to generate new resolver.")
             else:
@@ -185,14 +202,23 @@ class DnsProxy:
                 self.proxy_mode = self.domain_resolver.dns_mode
                 with open("working_resolver_config.json", "w") as f:
                     json.dump(domain_resolver.to_dict(), f, indent=4)
-                logging.info(f"Finding consistent mode and starting resolvers took {time.time() - self.start_time} seconds in total.")
-                if not domain_resolver.add_sni and domain_resolver.dns_mode in [DnsProxyMode.DOT, DnsProxyMode.DOH, DnsProxyMode.DOH3, DnsProxyMode.DOQ]:
-                    logging.warning(f"Sending no SNI with an encrypted DNS mode leads to no certificate validation during the TLS handshake. If you would like to avoid this, set dns_add_sni to True.")
+                logging.info(
+                    f"Finding consistent mode and starting resolvers took {time.time() - self.start_time} seconds "
+                    "in total."
+                )
+                if not domain_resolver.add_sni and domain_resolver.dns_mode in [
+                    DnsProxyMode.DOT,
+                    DnsProxyMode.DOH,
+                    DnsProxyMode.DOH3,
+                    DnsProxyMode.DOQ,
+                ]:
+                    logging.warning(
+                        "Sending no SNI with an encrypted DNS mode leads to no certificate validation during the "
+                        "TLS handshake. If you would like to avoid this, set dns_add_sni to True."
+                    )
         return time.time() - self.start_time
 
-
-
-    def start(self, time_measurement_only:bool = False):
+    def start(self, time_measurement_only: bool = False):
         """
         Starts the proxy. After calling the proxy, listens for connections.
         """
@@ -207,7 +233,6 @@ class DnsProxy:
             # start tcp and udp DNS server
             threading.Thread(target=self.start_udp_server).start()
             threading.Thread(target=self.start_tcp_server).start()
-
 
     def start_udp_server(self):
         """

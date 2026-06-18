@@ -12,7 +12,7 @@ class WrappedSocket:
 
     def __init__(self, timeout: int, _socket: socket.socket):
         self.timeout = timeout
-        self.buffer = b''
+        self.buffer = b""
         self.socket = _socket
         self.socket.settimeout(timeout)
 
@@ -40,7 +40,7 @@ class WrappedSocket:
         while len(list(filter(lambda x: x in self.buffer, until))) == 0:
             if len(self.buffer) > max_len:
                 raise ParserException(f"Exceeded max length of {max_len} bytes")
-            if time()-start_time > self.timeout:
+            if time() - start_time > self.timeout:
                 raise ParserException(f"Exceeded timeout of {self.timeout}s")
             self.buffer += self.socket.recv(STANDARD_SOCKET_RECEIVE_SIZE)
         until = list(filter(lambda x: x in self.buffer, until))[0]
@@ -85,7 +85,7 @@ class WrappedSocket:
         try:
             self.socket.shutdown(socket.SHUT_RDWR)
             self.socket.close()
-        except:
+        except Exception:
             pass
 
     def inject(self, content: bytes):
