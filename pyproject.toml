@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "dpyproxy"
-version = "2.2.0"
+version = "2.2.1"
 description = "Python proxy that implements DPI evasion mechanisms (TLS record fragmentation, TCP segmentation, encrypted DNS, HTTP)"
 readme = "README.md"
 license = "Apache-2.0"
