@@ -85,9 +85,11 @@ class DnsModule(Module):
         )
 
         dns_module.add_argument(
-            "--dns_skip_working_file",
-            default=False,
-            help="Whether taking the stored working resolver from a file should be skipped. Defaults to False.",
+            "--dns_working_resolver_config",
+            default="",
+            help="DPYProxy can save a working DNS resolver configuration, provide a location for this file here."
+            " Example: ./.working_resolver_config.json. If empty (default) no configuration is saved and"
+            " a working configuration is determined in each run.",
         )
 
     def extract_parameters(self, args: Namespace):
@@ -103,7 +105,7 @@ class DnsModule(Module):
             compare_ip_ranges=[x for x in args.dns_compare_ip_ranges.split(",")],
             block_page_ips=args.dns_block_page_ips,
             add_sni=args.dns_add_sni,
-            skip_working_file=args.dns_skip_working_file,
+            working_resolver_configuration=args.dns_working_resolver_config,
         )
 
     def start(self):

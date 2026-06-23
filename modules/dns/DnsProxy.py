@@ -35,7 +35,7 @@ class DnsProxy:
         compare_ip_ranges: list[str],
         block_page_ips: bool,
         add_sni: bool,
-        skip_working_file: bool,
+        working_resolver_configuration: str = "",
     ):
         # timeout for socket reads and message reception
         self.timeout = timeout
@@ -46,7 +46,7 @@ class DnsProxy:
         self.block_page_ips = block_page_ips
         self.proxy_mode = proxy_mode
         self.add_sni = add_sni
-        self.skip_working_file = skip_working_file
+        self.working_resolver_configuration = working_resolver_configuration
 
         # initialize UDP and TCP server sockets
         self.udp_server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -165,9 +165,13 @@ class DnsProxy:
         found_working = False
         domain_resolver_generator = self.generate_domain_resolver()
 
-        if os.path.exists("working_resolver_config.json") and not self.skip_working_file:
-            logging.info("Trying already found working resolver from config")
-            with open("working_resolver_config.json", "r") as f:
+        if (
+            self.working_resolver_configuration
+            and not len(self.working_resolver_configuration) == 0
+            and os.path.exists(self.working_resolver_configuration)
+        ):
+            logging.info(f"Trying already found working resolver from config {self.working_resolver_configuration}")
+            with open(self.working_resolver_configuration, "r") as f:
                 data = json.load(f)
             resolver = DomainResolver.from_dict(data)
             self.domain_resolver = resolver
@@ -200,8 +204,10 @@ class DnsProxy:
                 logging.info(f"{domain_resolver} consistently reachable, keeping!")
                 self.domain_resolver = domain_resolver
                 self.proxy_mode = self.domain_resolver.dns_mode
-                with open("working_resolver_config.json", "w") as f:
-                    json.dump(domain_resolver.to_dict(), f, indent=4)
+                if self.working_resolver_configuration and not len(self.working_resolver_configuration) == 0:
+                    logging.info(f"Saving working resolver to {self.working_resolver_configuration}")
+                    with open(self.working_resolver_configuration, "w") as f:
+                        json.dump(domain_resolver.to_dict(), f, indent=4)
                 logging.info(
                     f"Finding consistent mode and starting resolvers took {time.time() - self.start_time} seconds "
                     "in total."

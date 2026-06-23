@@ -12,9 +12,9 @@ DNS censorship. In a typical setup, DPYProxy runs locally replacing your previou
 The DNS module automatically determines a working circumvention method and DNS resolver. You can also specify a 
 circumvention method and resolver manually (see Usage). 
 
-The DNS module saves working circumvention methods and resolvers to a file `working_resolvers.json`. This file is loaded
-on startup to speed up the determination of a working circumvention method. You can force re-determination using the 
-`--dns_skip_working_file` flag.
+The DNS module can save working circumvention methods and resolvers to a file see 
+(`--dns_working_resolver_configuration`). This file is loaded on startup to speed up the determination of a working
+circumvention method. By default, a new working circumvention method is determined in each run.
 
 ### TLS Module
 You can run the TLS Module of DPYProxy locally or on a separate machine. It functions like an HTTP CONNECT/SOCKSv4/SOCKSv5 proxy. I.e., you can specify
@@ -109,6 +109,8 @@ TLS Module:
                         Connection timeout in seconds
   --tls_host TLS_HOST   Address the proxy server runs on
   --tls_port TLS_PORT   Port the proxy server runs on
+  --tls_record_version TLS_RECORD_VERSION
+                        Overwrites the TLS version in the TLS record with the given bytes. Pre-defined values ['DEFAULT', 'TLS10', 'TLS11', 'TLS12', 'TLS13_DRAFT_28', 'TLS13', 'SSL3', 'INVALID_SMALLER', 'INVALID_BIGGER'] or 2 byte long values such as 0303 or FFFF can be provided.
   --tls_record_frag, --no-tls_record_frag
                         Whether to use record fragmentation to forwarded TLS handshake messages (default: True)
   --tls_tcp_frag, --no-tls_tcp_frag
@@ -146,8 +148,8 @@ DNS Module:
                         Whether the given IP ranges to compare are block page IPs or not. Default is False.
   --dns_add_sni DNS_ADD_SNI
                         Whether or not to include the SNI for encrypted DNS modes. Defaults to True.
-  --dns_skip_working_file DNS_SKIP_WORKING_FILE
-                        Whether taking the stored working resolver from a file should be skipped. Defaults to False.
+  --dns_working_resolver_config DNS_WORKING_RESOLVER_CONFIG
+                        DPYProxy can save a working DNS resolver configuration, provide a location for this file here. Example: ./.working_resolver_config.json. If empty (default) no configuration is saved and a working configuration is determined in each run.
 
 HTTP Module:
   --http_timeout HTTP_TIMEOUT
@@ -165,7 +167,7 @@ Standard options:
   -h, --help            Show this help message and exit
   --debug, --no-debug   Turns on debugging (default: False)
   --disabled_modules DISABLED_MODULES
-                        List of proxy modules to disable. By default, all none are disabled. Hence, all are enabled
+                        List of proxy modules to disable. By default, only the HTTP module is disabled.
 ```
 
 ## Examples
