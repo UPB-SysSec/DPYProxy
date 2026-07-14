@@ -5,7 +5,10 @@ import logging
 import sys
 import threading
 import time
+import tomllib
 from argparse import ArgumentParser
+from importlib.metadata import PackageNotFoundError, version
+from pathlib import Path
 
 from enumerators.Modules import Modules
 from modules.dns.DnsModule import DnsModule
@@ -34,6 +37,13 @@ def extract_activated_modules(parser: ArgumentParser) -> list[Module]:
         help="List of proxy modules to disable. By default, only the HTTP module is disabled.",
     )
 
+    general.add_argument(
+        "-v",
+        "--version",
+        action="version",
+        version=f"%(prog)s {get_version()}",
+        help="Show program's version",
+    )
     # only parse arguments of basic module to determine used modules
     args = parser.parse_known_args()[0]
 
@@ -45,6 +55,21 @@ def extract_activated_modules(parser: ArgumentParser) -> list[Module]:
 
     # crate and set enabled modules
     return list(map(lambda x: x.create_module(parser), [x for x in Modules if x not in args.disabled_modules]))
+
+
+def get_version() -> str:
+    try:
+        ver = version("dpyproxy")
+    except PackageNotFoundError:
+        # Looks for pyproject.toml in the current directory
+        toml_path = Path("pyproject.toml")
+
+        if toml_path.exists():
+            with toml_path.open("rb") as f:
+                ver = tomllib.load(f)["project"]["version"]
+        else:
+            ver = "unknown"
+    return ver
 
 
 def main():
