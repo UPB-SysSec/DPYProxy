@@ -101,6 +101,10 @@ class DPYProxyApp(App):
         logging.getLogger().addHandler(handler)
         logging.getLogger().setLevel(logging.INFO)
 
+        # Clean up stop flag from previous run
+        if os.path.exists(STATUS_FILE):
+            os.remove(STATUS_FILE)
+
         # Poll status file every second
         Clock.schedule_interval(self._poll_status, 1.0)
 
