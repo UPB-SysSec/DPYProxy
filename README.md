@@ -2,7 +2,8 @@
 DPYProxy is a python proxy that implements DPI evasion mechanisms. To circumvent TLS censorship, TLS record fragmentation and TCP
 segmentation are implemented. To circumvent DNS censorship, DPYProxy uses encrypted DNS and TCP segmentation. All DPI evasion mechanisms can be enabled separately.
 
-DPYProxy comes with a TLS and DNS module circumventing TLS and DNS censorship respectively. Both modules are enabled by default:
+DPYProxy comes with a TLS and DNS module circumventing TLS and DNS censorship respectively. Both modules are enabled by default.
+DPYPRoxy also comes with an experimental HTTP module that is disables by default.
 
 
 ### DNS Module
@@ -215,7 +216,7 @@ dig wikipedia.org @127.0.0.1 -p 5533
 ```
 
 Using some kind of capturing tool like Wireshark, you can inspect the made DNS requests for the selected circumvention strategy.
-# Docker
+# Run in Docker
 
 You can run DPYProxy in a Docker container. A standard setting is provided in the `docker-compose.yml` file. You can
 also build the image yourself using the provided `Dockerfile` or change the parameters in the `docker-compose.yml` file.
@@ -225,10 +226,23 @@ Start the container with:
 docker-compose up
 ```
 
-# Roadmap
+# Academic References
 
-We developed DPYProxy when writing a blogpost in which we circumvented the GFW with TLS record fragmentation. Thus, the 
-functionality of DPYProxy is currently limited. Below, I gathered some potential avenues for the future.
+DPYProxy was developed as part of the following academic publication:
+
+- `Poster: Circumventing the GFW with TLS Record Fragmentation` at ACM CCS 2023: https://dl.acm.org/doi/10.1145/3576915.3624372
+
+Please reference it should you use DPYProxy in your research.
+
+DPYProxy has previously been used in the following academic publications.
+
+- `Transport Layer Obscurity: Circumventing SNI Censorship on the TLS-Layer` at IEEE S&P 2025: https://ieeexplore.ieee.org/abstract/document/11023326
+
+- `A Wall Behind A Wall: Emerging Regional Censorship in China` at IEEE S&P 2025: https://ieeexplore.ieee.org/document/11023292
+
+- `Towards Automated DNS Censorship Circumvention` at Virtual FOCI 2026: https://www.petsymposium.org/foci/2026/foci-2026-0001.php
+
+# Roadmap
 
 ## Implemented
 - [x] HTTP Connect Proxy
@@ -240,9 +254,9 @@ functionality of DPYProxy is currently limited. Below, I gathered some potential
 - [x] HTTP Circumventions
 
 ## Todo
-- [ ] unit tests...
 - [ ] IPv6
+- [ ] TLS Automation (as for DNS)
 
-## Maintainance
+# Maintainance
 - Run `ruff check --fix` to fix the auto fixable lint issues.
 - Run `ruff format .` to pretty the code. Few could need a manual effort.
