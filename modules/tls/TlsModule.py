@@ -7,6 +7,7 @@ from enumerators.TlsVersion import TlsVersion
 from modules.Module import Module
 from modules.tls.TcpProxy import TcpProxy
 from network.NetworkAddress import NetworkAddress
+from util.Util import port_range
 
 
 class TlsModule(Module):
@@ -53,7 +54,7 @@ class TlsModule(Module):
 
         tls_module.add_argument("--tls_host", type=str, default="localhost", help="Address the proxy server runs on")
 
-        tls_module.add_argument("--tls_port", type=int, default=4433, help="Port the proxy server runs on")
+        tls_module.add_argument("--tls_port", type=port_range, default=4433, help="Port the proxy server runs on")
 
         tls_module.add_argument(
             "--tls_record_version",
@@ -85,26 +86,25 @@ class TlsModule(Module):
             type=str,
             default=None,
             help="DNS server IP for all DNS queries of the TLS module. If not given, the DNS server started by the "
-            "DNS module us used. If DNS module is not used, the OS default DNS server is used.",
+            "DNS module is used. If DNS module is not used, the OS default DNS server is used.",
         )
 
         tls_module.add_argument(
             "--tls_dns_server_port",
-            type=int,
-            default=53,
-            help="DNS server port for all DNS queries. Only set if a DNS server IP is given. If not given, the "
-            "default port 53 is used.",
+            type=port_range,
+            default=None,
+            help="DNS server port for all DNS queries. Only set if a DNS server IP is given.",
         )
 
         tls_module.add_argument(
             "--tls_forward_proxy_host",
             type=str,
-            default="localhost",
-            help="Host of the forward proxy if any is present",
+            default=None,
+            help="Host of the forward proxy if any is present. Example: 'localhost'",
         )
 
         tls_module.add_argument(
-            "--tls_forward_proxy_port", type=int, default=None, help="Port the forward proxy server runs on"
+            "--tls_forward_proxy_port", type=port_range, default=None, help="Port the forward proxy server runs on"
         )
 
         tls_module.add_argument(
@@ -132,11 +132,8 @@ class TlsModule(Module):
         if args.tls_dns_server_ip is not None and self.dns_server is None:
             self.dns_server = NetworkAddress(args.tls_dns_server_ip, args.tls_dns_server_port)
 
-        if (
-            args.tls_forward_proxy_mode in [TcpProxyMode.HTTP, TcpProxyMode.SNI]
-            and args.tls_forward_proxy_mode != args.proxy_mode
-        ):
-            logging.debug("Forward proxy modes HTTP and SNI only usable if proxy mode is HTTP or SNI respectively.")
+        if args.tls_forward_proxy_host and args.tls_forward_proxy_mode in [TcpProxyMode.HTTP, TcpProxyMode.SNI]:
+            logging.info("HTTP and SNI mode is not supported in forward proxy.")
             exit()
 
         self.proxy = TcpProxy(

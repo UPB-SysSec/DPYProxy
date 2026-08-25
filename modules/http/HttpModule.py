@@ -5,6 +5,7 @@ from modules.http.HttpStrategies import HttpStrategies
 from modules.Module import Module
 from modules.tls.TcpProxy import TcpProxy
 from network.NetworkAddress import NetworkAddress
+from util.Util import port_range
 
 
 class HttpModule(Module):
@@ -27,7 +28,7 @@ class HttpModule(Module):
 
         http_module.add_argument("--http_host", type=str, default="localhost", help="Address the proxy server runs on")
 
-        http_module.add_argument("--http_port", type=int, default=8080, help="Port the proxy server runs on")
+        http_module.add_argument("--http_port", type=port_range, default=8080, help="Port the proxy server runs on")
 
         http_module.add_argument(
             "--http_strategy",

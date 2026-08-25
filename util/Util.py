@@ -1,3 +1,4 @@
+import argparse
 import logging
 import socket
 
@@ -73,3 +74,13 @@ def parse_all_ips(answer: dns.message.Message) -> list[str]:
                 f"Could not extract IP from DNS response with exception {e}:\n{_name}, {_rdclass}, {_rdtype}; None"
             )
     return resolved_ips
+
+
+def port_range(value):
+    try:
+        ivalue = int(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"{value} is an invalid port. Must be a number between 1 and 65535.")
+    if ivalue < 1 or ivalue > 65535:
+        raise argparse.ArgumentTypeError(f"{value} is an invalid port. Must be between 1 and 65535.")
+    return ivalue
