@@ -88,7 +88,7 @@ class Socksv5:
     def socks5_request(server_address: NetworkAddress):
         if not is_valid_ipv4_address(server_address.host):
             domain = server_address.host.encode("utf-8")
-            address = b"\x03" + len(domain).to_bytes() + domain
+            address = b"\x03" + len(domain).to_bytes(1, byteorder="big") + domain
         else:
             address = b"\x01" + socket.inet_aton(server_address.host)
         return (

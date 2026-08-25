@@ -130,7 +130,7 @@ class DnsProxy:
             ).generate_working_resolver(self.proxy_mode)
             yield from _gen
 
-        elif self.resolver_address.port is not None:
+        elif self.resolver_address.port is None:
             logging.info(
                 f"mode {self.proxy_mode} and resolver {self.resolver_address.host} specified. Setting standard "
                 f"port {self.proxy_mode.default_port()}."
