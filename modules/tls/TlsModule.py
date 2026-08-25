@@ -167,7 +167,8 @@ class TlsModule(Module):
         """
         if not self.dns_server:
             self.dns_server = NetworkAddress(
-                "127.0.0.1" if dns_server.host == "0.0.0.0" else dns_server.host, dns_server.port
+                "127.0.0.1" if dns_server.host == "0.0.0.0" else "::1" if dns_server.host == "::" else dns_server.host,
+                dns_server.port,
             )
         else:
             logging.warning("DNS server manually overwritten in TLS module. Not setting address of DNS module server.")

@@ -1,7 +1,10 @@
+from urllib.parse import urlsplit
+
 from enumerators.HttpMethod import HttpMethod
 from exception.ParserException import ParserException
 from network.NetworkAddress import NetworkAddress
 from network.tcp.WrappedTcpSocket import WrappedTcpSocket
+from util.Util import is_valid_ipv6_address
 
 
 class Http:
@@ -70,38 +73,31 @@ class Http:
         return Http._parse_http_method(wrapped_socket, ["CONNECT"], False)
 
     @staticmethod
-    def parse_uri(uri: str) -> (str, str, int):
+    def parse_uri(input_string: str, default_port: int = 80) -> (str, str, int):
         """
         Parses a URI into its host, path and port components.
         Parameters are currently not parsed.
         :param uri: uri to parse
         :return: host, path, port
         """
-        if "://" in uri:
-            # remove protocol prefix if present
-            uri = uri.split("://")[1]
+        # if IP address, enforce a fake scheme so urlsplit parses the netloc reliably
+        if "//" not in input_string:
+            input_string = f"//{input_string}"
 
-        if "/" in uri:
-            # split host and path
-            uri, path = uri.split("/", 1)
-            path = "/" + path
-        else:
-            path = "/"
+        parsed = urlsplit(input_string)
 
-        if ":" in uri:
-            # split host and port
-            uri, port = uri.split(":")
-            port = int(port)
-        else:
-            port = 80
+        host = parsed.hostname
+        port = parsed.port if parsed.port else default_port
+        path = parsed.path if parsed.path else "/"
 
-        return uri, path, port
+        return host, path, port
 
     @staticmethod
     def connect_message(server_address: NetworkAddress, version: str) -> bytes:
+        host_display = f"[{server_address.host}]" if is_valid_ipv6_address(server_address.host) else server_address.host
         return (
-            f"CONNECT {server_address.host}:{server_address.port} {version}\n"
-            f"Host: {server_address.host}:{server_address.port}\n\n".encode("ASCII")
+            f"CONNECT {host_display}:{server_address.port} {version}\n"
+            f"Host: {host_display}:{server_address.port}\n\n".encode("ASCII")
         )
 
     @staticmethod

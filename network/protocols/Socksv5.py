@@ -4,7 +4,7 @@ from exception.ParserException import ParserException
 from network.NetworkAddress import NetworkAddress
 from network.tcp.WrappedTcpSocket import WrappedTcpSocket
 from util.constants import SOCKSv5_HEADER
-from util.Util import is_valid_ipv4_address
+from util.Util import is_valid_ipv4_address, is_valid_ipv6_address
 
 
 class Socksv5:
@@ -86,11 +86,13 @@ class Socksv5:
 
     @staticmethod
     def socks5_request(server_address: NetworkAddress):
-        if not is_valid_ipv4_address(server_address.host):
+        if is_valid_ipv6_address(server_address.host):
+            address = b"\x04" + socket.inet_pton(socket.AF_INET6, server_address.host)
+        elif is_valid_ipv4_address(server_address.host):
+            address = b"\x01" + socket.inet_pton(socket.AF_INET, server_address.host)
+        else:
             domain = server_address.host.encode("utf-8")
             address = b"\x03" + len(domain).to_bytes(1, byteorder="big") + domain
-        else:
-            address = b"\x01" + socket.inet_aton(server_address.host)
         return (
             SOCKSv5_HEADER
             + b"\x01"
@@ -102,5 +104,8 @@ class Socksv5:
     @staticmethod
     def socks5_ok(connection_socket: WrappedTcpSocket) -> bytes:
         host_ip, host_port = connection_socket.socket.getsockname()
-        host_address = b"\x01" + socket.inet_aton(host_ip)
+        if is_valid_ipv6_address(host_ip):
+            host_address = b"\x04" + socket.inet_pton(socket.AF_INET6, host_ip)
+        else:
+            host_address = b"\x01" + socket.inet_pton(socket.AF_INET, host_ip)
         return SOCKSv5_HEADER + b"\x00" + Socksv5.RESERVED_BYTE + host_address + host_port.to_bytes(2, byteorder="big")

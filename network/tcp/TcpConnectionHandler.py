@@ -20,7 +20,7 @@ from util.constants import (
     SOCKSv4_HEADER,
     SOCKSv5_HEADER,
 )
-from util.Util import is_valid_ipv4_address
+from util.Util import is_valid_ipv4_address, is_valid_ipv6_address
 
 
 class TcpConnectionHandler:
@@ -80,9 +80,9 @@ class TcpConnectionHandler:
             return
 
         # resolve domain if no forward proxy or the forward proxy needs a resolved address
-        if (not is_valid_ipv4_address(final_server_address.host)) and (
-            self.forward_proxy_resolve_address or self.forward_proxy is None
-        ):
+        if (
+            not (is_valid_ipv4_address(final_server_address.host) or is_valid_ipv6_address(final_server_address.host))
+        ) and (self.forward_proxy_resolve_address or self.forward_proxy is None):
             if self.dns_server:
                 host = DomainResolver.resolve_udp_static_to_ip(
                     final_server_address.host, resolver=self.dns_server, timeout=self.timeout

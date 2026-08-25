@@ -5,7 +5,6 @@ import logging
 import sys
 import threading
 import time
-import tomllib
 from argparse import ArgumentParser
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
@@ -14,6 +13,11 @@ from enumerators.Modules import Modules
 from modules.dns.DnsModule import DnsModule
 from modules.Module import Module
 from modules.tls.TlsModule import TlsModule
+
+if sys.version_info >= (3, 11):
+    import tomllib
+else:
+    import tomli as tomllib
 
 
 def extract_activated_modules(parser: ArgumentParser) -> list[Module]:

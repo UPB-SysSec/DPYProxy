@@ -12,7 +12,20 @@ def is_valid_ipv4_address(ip_address: str) -> bool:
     :return: Whether the given string is a valid ip address
     """
     try:
-        socket.inet_aton(ip_address)
+        socket.inet_pton(socket.AF_INET, ip_address)
+        return True
+    except socket.error:
+        return False
+
+
+def is_valid_ipv6_address(ip_address: str) -> bool:
+    """
+    Returns whether the given string is a valid ipv6 address.
+    :param ip_address: String to check for ipv6 validity
+    :return: Whether the given string is a valid ip address
+    """
+    try:
+        socket.inet_pton(socket.AF_INET6, ip_address)
         return True
     except socket.error:
         return False

@@ -18,6 +18,7 @@ from network.DomainResolver import DomainResolver
 from network.NetworkAddress import NetworkAddress
 from network.protocols.Dns import Dns
 from network.tcp.WrappedTcpSocket import WrappedTcpSocket
+from util.Util import is_valid_ipv6_address
 
 
 class DnsProxy:
@@ -49,11 +50,16 @@ class DnsProxy:
         self.working_resolver_configuration = working_resolver_configuration
 
         # initialize UDP and TCP server sockets
-        self.udp_server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        _af = socket.AF_INET6 if is_valid_ipv6_address(address.host) else socket.AF_INET
+        self.udp_server = socket.socket(_af, socket.SOCK_DGRAM)
         self.udp_server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        if _af == socket.AF_INET6:
+            self.udp_server.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 1)
         self.udp_server.settimeout(timeout)
-        self.tcp_server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.tcp_server = socket.socket(_af, socket.SOCK_STREAM)
         self.tcp_server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        if _af == socket.AF_INET6:
+            self.tcp_server.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 1)
         self.udp_server.settimeout(timeout)
         self.continue_processing = True
 
