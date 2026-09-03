@@ -68,8 +68,9 @@ class TcpConnectionHandler:
         """
         # determine proxy mode / message type
         self.proxy_mode = self.get_proxy_mode()
+        self.info(f"New connection detected as {self.proxy_mode.name} proxy mode")
         if self.proxy_mode in self.disabled_modes:
-            self.info(f"Proxy mode {self.proxy_mode} is disabled. Stopping!")
+            self.info(f"Proxy mode {self.proxy_mode.name} is disabled. Stopping!")
             return
 
         # determine destination address
@@ -89,7 +90,7 @@ class TcpConnectionHandler:
                 )
             else:
                 host = DomainResolver.resolve_local(final_server_address.host)
-            self.debug(f"Resolved {host} from {final_server_address.host}")
+            self.debug(f"Resolved hostname {final_server_address.host} to {host}")
             final_server_address.host = host
 
         # set correct target
@@ -103,7 +104,7 @@ class TcpConnectionHandler:
         try:
             server_socket = socket.create_connection(target_address)
         except Exception as e:
-            self.info(f"Could not connect to server due to {e}.")
+            self.info(f"Failed to connect to {target_address[0]}:{target_address[1]}: {e}")
             self.connection_socket.try_close()
             return
         if self.tcp_frag and self.record_frag:
@@ -113,12 +114,15 @@ class TcpConnectionHandler:
             server_socket = WrappedTcpSocket(self.timeout, server_socket, self.frag_size)
         else:
             server_socket = WrappedTcpSocket(self.timeout, server_socket)
-        logging.info(
-            f"Connected {final_server_address.host}:{final_server_address.port} "
-            f"to {target_address[0]}:{target_address[1]}"
+        self.info(
+            f"Connection established via {self.proxy_mode.name}: "
+            f"{self.address.host}:{self.address.port} -> "
+            f"{final_server_address.host}:{final_server_address.port}"
+            f" (target: {target_address[0]}:{target_address[1]})"
         )
 
         self.send_proxy_answer(http_version, server_socket)
+        self.debug(f"Sent {self.proxy_mode.name} handshake response to client")
 
         if self.forward_proxy is not None:
             self.connect_forward_proxy(server_socket, final_server_address, http_version)
@@ -241,10 +245,10 @@ class TcpConnectionHandler:
                 answer = server_socket.recv(STANDARD_SOCKET_RECEIVE_SIZE)
                 if not answer.upper().startswith(Socksv5.socks5_ok(server_socket)):
                     self.debug(f"Forward proxy rejected the connection with {answer}")
-        except Exception:
-            self.debug("Could not send proxy message")
+        except Exception as e:
+            self.debug(f"Could not complete forward proxy handshake. Error: {e}")
             self.connection_socket.try_close()
-            logging.info("Closed connections")
+            self.debug("Closed client socket after failed forward proxy handshake")
             return
 
     # LOGGER utility functions

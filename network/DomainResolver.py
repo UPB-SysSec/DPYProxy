@@ -480,7 +480,13 @@ class DomainResolver:
                 logging.debug(f"Could not resolve to {self.resolver} for mode {self.dns_mode} with exception {e}")
             else:
                 working += 1
-        return working >= DomainResolver.THRESHOLD_CONFIRM_WORKING
+        reachable = working >= DomainResolver.THRESHOLD_CONFIRM_WORKING
+        logging.debug(
+            f"Reachability check for {self.resolver} ({self.dns_mode}): "
+            f"{working}/{DomainResolver.TRIES_CONFIRM_WORKING} succeeded - "
+            f"{'REACHABLE' if reachable else 'UNREACHABLE'}"
+        )
+        return reachable
 
     def __str__(self):
         return f"{self.dns_mode} - {self.resolver}"

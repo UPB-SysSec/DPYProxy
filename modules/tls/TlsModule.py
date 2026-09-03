@@ -155,7 +155,7 @@ class TlsModule(Module):
 
     def stop(self):
         self.proxy.continue_processing = False
-        logging.info("Waiting for proxy to stop")
+        logging.info("### Stopping TLS module proxy ###")
 
     def set_dns_server(self, dns_server: NetworkAddress):
         """

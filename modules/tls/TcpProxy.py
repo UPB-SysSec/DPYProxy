@@ -88,11 +88,11 @@ class TcpProxy:
         # opening server socket
         self.server.bind((self.address.host, self.address.port))
         self.server.listen()
-        print(f"### Started TCP proxy on {self.address.host}:{self.address.port} ###")
+        logging.info(f"### Started TCP proxy on {self.address.host}:{self.address.port} ###")
         if self.dns_server:
-            logging.debug(f"Using DNS server {self.dns_server}")
+            logging.info(f"Using DNS server {self.dns_server}")
         if self.forward_proxy:
-            logging.debug(f"Using forward proxy {self.forward_proxy}")
+            logging.info(f"Using forward proxy {self.forward_proxy}")
         while self.continue_processing:
             readable, _, _ = select.select([self.server], [], [], 1)
             if not readable:
@@ -105,7 +105,6 @@ class TcpProxy:
                 return
             address = NetworkAddress(address[0], address[1])
             client_socket = WrappedTcpSocket(self.timeout, client_socket)
-            logging.info(f"request from {address.host}:{address.port}")
             # spawn a new thread that runs the function handle()
             threading.Thread(target=self.handle, args=(client_socket, address)).start()
         logging.info("### Stopped proxy ###")

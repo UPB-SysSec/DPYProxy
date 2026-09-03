@@ -67,4 +67,4 @@ class HttpModule(Module):
 
     def stop(self):
         self.proxy.continue_processing = False
-        logging.info("Waiting for proxy to stop")
+        logging.info("### Stopping HTTP module proxy ###")
