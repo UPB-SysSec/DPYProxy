@@ -35,6 +35,25 @@ jobs:
           restore-keys: |
             buildozer-global-
 
+      - name: Cache Rust toolchain
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo
+            ~/.rustup
+          key: rust-android-${{ runner.os }}
+
+      - name: Install Rust toolchain for Android
+        # The cryptography recipe's Rust component (cryptography-cffi) needs
+        # rustup on the host to cross-compile for Android; the buildozer
+        # image doesn't include it, so it's installed here and mounted into
+        # the container below.
+        run: |
+          if ! command -v rustup >/dev/null; then
+            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
+          fi
+          "$HOME/.cargo/bin/rustup" target add aarch64-linux-android
+
       - name: Decode release keystore
         run: |
           echo "${{ secrets.P4A_RELEASE_KEYSTORE_BASE64 }}" | base64 -d > "$GITHUB_WORKSPACE/release.keystore"
@@ -69,7 +88,10 @@ jobs:
           docker run --rm \
             --volume "$HOME/.buildozer":/home/user/.buildozer \
             --volume "$GITHUB_WORKSPACE":/home/user/hostcwd \
+            --volume "$HOME/.cargo":/home/user/.cargo \
+            --volume "$HOME/.rustup":/home/user/.rustup \
             "${version_env[@]}" \
+            --env PATH="/home/user/.cargo/bin:/home/user/.buildozer/android/platform/apache-ant-1.9.4/bin:/home/user/.venv/bin:/home/user/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" \
             --env P4A_RELEASE_KEYSTORE=/home/user/hostcwd/release.keystore \
             --env P4A_RELEASE_KEYSTORE_PASSWD="${{ secrets.P4A_RELEASE_KEYSTORE_PASSWD }}" \
             --env P4A_RELEASE_KEYALIAS="${{ secrets.P4A_RELEASE_KEYALIAS }}" \
