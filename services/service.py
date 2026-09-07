@@ -33,6 +33,7 @@ from argparse import ArgumentParser
 from enumerators.Modules import Modules
 from enumerators.TcpProxyMode import TcpProxyMode
 from enumerators.DnsProxyMode import DnsProxyMode
+from enumerators.TlsVersion import TlsVersion
 from modules.dns.DnsModule import DnsModule
 from modules.Module import Module
 from modules.tls.TlsModule import TlsModule
@@ -95,9 +96,9 @@ def build_default_args() -> argparse.Namespace:
         tls_timeout=10,
         tls_host='localhost',
         tls_port=4433,
-        tls_record_version='DEFAULT',
-        tls_record_frag=True,
-        tls_tcp_frag=True,
+        tls_record_version=TlsVersion.DEFAULT.value,
+        tls_record_frag=False,
+        tls_tcp_frag=False,
         tls_frag_size=20,
         tls_dns_server_ip=None,
         tls_dns_server_port=53,
@@ -151,7 +152,7 @@ def main():
     handler = FileLogHandler()
     handler.setFormatter(logging.Formatter('[%(levelname)s] %(name)s: %(message)s'))
     logging.getLogger().addHandler(handler)
-    logging.getLogger().setLevel(logging.INFO)
+    logging.getLogger().setLevel(logging.DEBUG)
 
     # Clean up stop flag from previous run
     if os.path.exists(STOP_FILE):

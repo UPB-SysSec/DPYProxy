@@ -100,10 +100,10 @@ class Http:
     @staticmethod
     def connect_message(server_address: NetworkAddress, version: str) -> bytes:
         return (
-            f"CONNECT {server_address.host}:{server_address.port} {version}\n"
-            f"Host: {server_address.host}:{server_address.port}\n\n".encode("ASCII")
+            f"CONNECT {server_address.host}:{server_address.port} {version}\r\n"
+            f"Host: {server_address.host}:{server_address.port}\r\n\r\n".encode("ASCII")
         )
 
     @staticmethod
     def http_200_ok(version: str) -> bytes:
-        return f"{version} 200 OK\n\n".encode("ASCII")
+        return f"{version} 200 OK\r\n\r\n".encode("ASCII")
