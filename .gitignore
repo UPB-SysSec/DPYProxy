@@ -34,6 +34,8 @@ MANIFEST
 #  before PyInstaller builds the exe, so as to inject date/other infos into it.
 *.manifest
 *.spec
+# ...except buildozer.spec, which is a tracked, hand-maintained Android build config, not a PyInstaller artifact.
+!buildozer.spec
 
 # Installer logs
 pip-log.txt
