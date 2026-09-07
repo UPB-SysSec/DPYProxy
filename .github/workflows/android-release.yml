@@ -1,0 +1,66 @@
+# Builds a signed release APK with Buildozer and attaches it to a GitHub Release.
+#
+# Triggered by pushing a tag matching v*.*.* (e.g. v1.0.0), or manually via
+# workflow_dispatch. Requires these repository secrets, generated with
+# `keytool -genkeypair`:
+#   P4A_RELEASE_KEYSTORE_BASE64  - base64-encoded contents of the .keystore file
+#   P4A_RELEASE_KEYSTORE_PASSWD  - keystore password
+#   P4A_RELEASE_KEYALIAS         - key alias
+#   P4A_RELEASE_KEYALIAS_PASSWD  - key password
+
+name: Android release
+
+on:
+  push:
+    tags: ["v*.*.*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-android-release:
+    name: Build signed release APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Cache Buildozer global directory (SDK/NDK)
+        uses: actions/cache@v4
+        with:
+          path: ~/.buildozer
+          key: buildozer-global-${{ hashFiles('buildozer.spec') }}
+
+      - name: Decode release keystore
+        run: |
+          echo "${{ secrets.P4A_RELEASE_KEYSTORE_BASE64 }}" | base64 -d > "$GITHUB_WORKSPACE/release.keystore"
+
+      - name: Pull official Buildozer image
+        run: docker pull kivy/buildozer:latest
+
+      - name: Build with Buildozer
+        # Runs the official kivy/buildozer Docker image directly instead of a
+        # third-party wrapper action, since this step has access to the
+        # signing secrets below. See https://github.com/kivy/buildozer for
+        # the documented docker run invocation this follows.
+        run: |
+          mkdir -p "$HOME/.buildozer"
+          docker run --rm \
+            --volume "$HOME/.buildozer":/home/user/.buildozer \
+            --volume "$GITHUB_WORKSPACE":/home/user/hostcwd \
+            --env P4A_RELEASE_KEYSTORE=/home/user/hostcwd/release.keystore \
+            --env P4A_RELEASE_KEYSTORE_PASSWD="${{ secrets.P4A_RELEASE_KEYSTORE_PASSWD }}" \
+            --env P4A_RELEASE_KEYALIAS="${{ secrets.P4A_RELEASE_KEYALIAS }}" \
+            --env P4A_RELEASE_KEYALIAS_PASSWD="${{ secrets.P4A_RELEASE_KEYALIAS_PASSWD }}" \
+            kivy/buildozer android release
+
+      - name: Remove decoded keystore
+        if: always()
+        run: rm -f "$GITHUB_WORKSPACE/release.keystore"
+
+      - name: Attach APK to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: bin/*.apk

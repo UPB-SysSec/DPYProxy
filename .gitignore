@@ -122,6 +122,11 @@ celerybeat.pid
 # SageMath parsed files
 *.sage.py
 
+# Android release signing (never commit — the signing identity for all future releases)
+*.keystore
+*.jks
+release-keystore-credentials*.txt
+
 # Environments
 .env
 .venv
