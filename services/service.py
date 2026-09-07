@@ -97,9 +97,9 @@ def build_default_args() -> argparse.Namespace:
         tls_host='localhost',
         tls_port=4433,
         tls_record_version=TlsVersion.DEFAULT.value,
-        tls_record_frag=False,
-        tls_tcp_frag=False,
-        tls_frag_size=20,
+        tls_record_frag=True,
+        tls_tcp_frag=True,
+        tls_frag_size=100,
         tls_dns_server_ip=None,
         tls_dns_server_port=53,
         tls_forward_proxy_host='localhost',
@@ -152,7 +152,7 @@ def main():
     handler = FileLogHandler()
     handler.setFormatter(logging.Formatter('[%(levelname)s] %(name)s: %(message)s'))
     logging.getLogger().addHandler(handler)
-    logging.getLogger().setLevel(logging.DEBUG)
+    logging.getLogger().setLevel(logging.INFO)
 
     # Clean up stop flag from previous run
     if os.path.exists(STOP_FILE):
