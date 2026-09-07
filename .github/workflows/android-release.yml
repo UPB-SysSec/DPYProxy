@@ -53,15 +53,7 @@ jobs:
           fi
 
       - name: Pull official Buildozer image
-        # Pinned to a build from ~2 months before 2026-09-07, predating the
-        # image's most recent rebuild (13 days prior at the time of writing)
-        # which bundled a pip/packaging version that fails to install
-        # charset_normalizer's prebuilt Android wheel ("... is not a
-        # supported wheel on this platform"), breaking every build. Bump
-        # deliberately once that's fixed upstream, not automatically.
-        run: docker pull "$BUILDOZER_IMAGE"
-        env:
-          BUILDOZER_IMAGE: ghcr.io/kivy/buildozer@sha256:60df51d2bcb537c3eb7894eeb9b9b12d93a3d615fb8f08e760195e887298f200
+        run: docker pull kivy/buildozer:latest
 
       - name: Build with Buildozer
         # Runs the official kivy/buildozer Docker image directly instead of a
@@ -82,9 +74,8 @@ jobs:
             --env P4A_RELEASE_KEYSTORE_PASSWD="${{ secrets.P4A_RELEASE_KEYSTORE_PASSWD }}" \
             --env P4A_RELEASE_KEYALIAS="${{ secrets.P4A_RELEASE_KEYALIAS }}" \
             --env P4A_RELEASE_KEYALIAS_PASSWD="${{ secrets.P4A_RELEASE_KEYALIAS_PASSWD }}" \
-            "$BUILDOZER_IMAGE" android release
-        env:
-          BUILDOZER_IMAGE: ghcr.io/kivy/buildozer@sha256:60df51d2bcb537c3eb7894eeb9b9b12d93a3d615fb8f08e760195e887298f200
+            --env VERSION_charset_normalizer=3.3.2 \
+            kivy/buildozer android release
 
       - name: Remove decoded keystore
         if: always()
