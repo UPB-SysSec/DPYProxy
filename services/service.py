@@ -47,6 +47,16 @@ def get_shared_dir() -> str:
 
 STATUS_FILE = os.path.join(get_shared_dir(), 'dpyproxy_status.json')
 STOP_FILE   = os.path.join(get_shared_dir(), 'dpyproxy_stop')
+CONFIG_FILE = os.path.join(get_shared_dir(), 'dpyproxy_config.json')
+
+
+def load_ui_config() -> dict:
+    """Reads config overrides saved by the UI's settings tab, if any."""
+    try:
+        with open(CONFIG_FILE) as f:
+            return json.load(f)
+    except Exception:
+        return {}
 
 def write_status(status: str, log: str = ''):
     try:
@@ -89,8 +99,23 @@ def extract_activated_modules(parser: ArgumentParser) -> list[Module]:
     return [mod.create_module(parser) for mod in Modules if mod not in args.disabled_modules]
 
 
+def apply_ui_overrides(args: argparse.Namespace) -> argparse.Namespace:
+    """Applies config values saved by the UI's settings tab onto the default args."""
+    overrides = load_ui_config()
+    for key, value in overrides.items():
+        if not hasattr(args, key):
+            continue
+        if key == 'dns_mode' and isinstance(value, str):
+            try:
+                value = DnsProxyMode[value]
+            except KeyError:
+                continue
+        setattr(args, key, value)
+    return args
+
+
 def build_default_args() -> argparse.Namespace:
-    return argparse.Namespace(
+    args = argparse.Namespace(
         # TLS
         tls_disabled_modes=[],
         tls_timeout=10,
@@ -145,6 +170,7 @@ def build_default_args() -> argparse.Namespace:
         debug=False,
         disabled_modules=[Modules.HTTP],
     )
+    return apply_ui_overrides(args)
 
 
 def main():
