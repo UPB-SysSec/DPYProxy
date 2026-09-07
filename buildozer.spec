@@ -47,7 +47,6 @@ requirements = python3,kivy,\
     attrs,\
     certifi,\
     cffi,\
-    charset_normalizer==3.3.2,\
     cryptography,\
     dnspython,\
     h11,\

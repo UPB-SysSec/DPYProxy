@@ -53,19 +53,15 @@ jobs:
           fi
 
       - name: Pull official Buildozer image
-        run: docker pull kivy/buildozer:latest
-
-      - name: Debug workspace and container mount
-        run: |
-          echo "== on host =="
-          echo "PWD: $(pwd)"
-          echo "GITHUB_WORKSPACE: $GITHUB_WORKSPACE"
-          ls -la "$GITHUB_WORKSPACE"
-          echo "== inside container (WORKDIR, default entrypoint bypassed) =="
-          docker run --rm --entrypoint /bin/bash \
-            --volume "$GITHUB_WORKSPACE":/home/user/hostcwd \
-            kivy/buildozer:latest \
-            -c "pwd && ls -la /home/user/hostcwd"
+        # Pinned to a build from ~2 months before 2026-09-07, predating the
+        # image's most recent rebuild (13 days prior at the time of writing)
+        # which bundled a pip/packaging version that fails to install
+        # charset_normalizer's prebuilt Android wheel ("... is not a
+        # supported wheel on this platform"), breaking every build. Bump
+        # deliberately once that's fixed upstream, not automatically.
+        run: docker pull "$BUILDOZER_IMAGE"
+        env:
+          BUILDOZER_IMAGE: ghcr.io/kivy/buildozer@sha256:60df51d2bcb537c3eb7894eeb9b9b12d93a3d615fb8f08e760195e887298f200
 
       - name: Build with Buildozer
         # Runs the official kivy/buildozer Docker image directly instead of a
@@ -86,7 +82,9 @@ jobs:
             --env P4A_RELEASE_KEYSTORE_PASSWD="${{ secrets.P4A_RELEASE_KEYSTORE_PASSWD }}" \
             --env P4A_RELEASE_KEYALIAS="${{ secrets.P4A_RELEASE_KEYALIAS }}" \
             --env P4A_RELEASE_KEYALIAS_PASSWD="${{ secrets.P4A_RELEASE_KEYALIAS_PASSWD }}" \
-            kivy/buildozer android release
+            "$BUILDOZER_IMAGE" android release
+        env:
+          BUILDOZER_IMAGE: ghcr.io/kivy/buildozer@sha256:60df51d2bcb537c3eb7894eeb9b9b12d93a3d615fb8f08e760195e887298f200
 
       - name: Remove decoded keystore
         if: always()
