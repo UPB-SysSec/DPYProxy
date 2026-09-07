@@ -4,8 +4,6 @@ from unittest.mock import MagicMock
 
 import dns
 
-import os
-
 for mod in [
     'pylsqpack',
     'aioquic', 'aioquic.h3', 'aioquic.h3.connection', 'aioquic.h3.events',
@@ -18,7 +16,6 @@ dns.quic = sys.modules['dns.quic']
 import json
 import logging
 import os
-import time
 
 from kivy.app import App
 from kivy.clock import Clock
@@ -342,7 +339,6 @@ class DPYProxyApp(App):
 
     def _build_log_panel(self):
         card = Card(size_hint_y=1, padding=(dp(2), dp(2)))
-        card.size_hint_y = 1
         self.scroll_view = ScrollView()
         self.log_label = Label(
             text='[Ready]',
@@ -485,7 +481,7 @@ class DPYProxyApp(App):
             f.write('stop')
 
         try:
-            from jnius import autoclass, cast
+            from jnius import autoclass
 
             PythonActivity = autoclass('org.kivy.android.PythonActivity')
             Intent = autoclass('android.content.Intent')
@@ -561,10 +557,19 @@ class DPYProxyApp(App):
         return True
 
     def on_resume(self):
-        # SDL2's GL context on Android can come back blank after the app is
-        # backgrounded; forcing a resize dispatch makes Kivy re-render the
-        # whole canvas tree instead of leaving stale/black framebuffers.
-        Clock.schedule_once(lambda dt: Window.dispatch('on_resize', *Window.size), 0)
+        # SDL2's GL context on Android can be recreated after the app is
+        # backgrounded, leaving previously rendered canvases (card
+        # backgrounds, log text) blank. Re-adding the root widget forces
+        # Kivy to reissue every canvas instruction against the current
+        # context instead of leaving stale/black framebuffers.
+        Clock.schedule_once(self._refresh_after_resume, 0)
+
+    def _refresh_after_resume(self, dt):
+        root = self.root
+        parent = root.parent if root else None
+        if parent:
+            parent.remove_widget(root)
+            parent.add_widget(root)
 
 
 if __name__ == '__main__':
