@@ -78,7 +78,19 @@ jobs:
         if: always()
         run: rm -f "$GITHUB_WORKSPACE/release.keystore"
 
+      # Manual (workflow_dispatch) runs have no tag to attach a release to —
+      # e.g. for testing this pipeline on a feature branch without cutting a
+      # real release on main. Upload the APK as a downloadable build artifact
+      # instead in that case.
+      - name: Upload APK as build artifact
+        if: github.ref_type != 'tag'
+        uses: actions/upload-artifact@v4
+        with:
+          name: dpyproxy-android-release
+          path: bin/*.apk
+
       - name: Attach APK to GitHub Release
+        if: github.ref_type == 'tag'
         uses: softprops/action-gh-release@v2
         with:
           files: bin/*.apk
