@@ -43,7 +43,7 @@ def get_shared_dir() -> str:
         from android.storage import app_storage_path
         return app_storage_path()
     except ImportError:
-        return '/tmp'  # Fallback für Desktop
+        return '/tmp'  # fallback for desktop
 
 STATUS_FILE = os.path.join(get_shared_dir(), 'dpyproxy_status.json')
 STOP_FILE   = os.path.join(get_shared_dir(), 'dpyproxy_stop')

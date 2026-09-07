@@ -41,7 +41,7 @@ def get_shared_dir() -> str:
         from android.storage import app_storage_path
         return app_storage_path()
     except ImportError:
-        return '/tmp'  # Fallback für Desktop
+        return '/tmp'  # fallback for desktop
 
 
 STATUS_FILE = os.path.join(get_shared_dir(), 'dpyproxy_status.json')
@@ -474,7 +474,7 @@ class DPYProxyApp(App):
         self._set_config_locked(True)
         self._set_status('Starting…', AMBER)
         self.log_label.text = "[Starting service...]"
-        logging.info("Service gestartet!")
+        logging.info("Service started!")
 
     def stop_service(self, instance):
         with open(STOP_FILE, 'w') as f:
@@ -505,7 +505,7 @@ class DPYProxyApp(App):
 
         self._reset_buttons()
         self._set_status('Stopped', TEXT_DIM)
-        logging.info("Stop-Signal gesendet.")
+        logging.info("Stop signal sent.")
 
     def _poll_status(self, dt):
         """Read status file written by service and update UI."""
