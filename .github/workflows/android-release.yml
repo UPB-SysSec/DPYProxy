@@ -37,6 +37,19 @@ jobs:
         run: |
           echo "${{ secrets.P4A_RELEASE_KEYSTORE_BASE64 }}" | base64 -d > "$GITHUB_WORKSPACE/release.keystore"
 
+      - name: Determine app version from tag
+        id: version
+        run: |
+          # Keeps the Android app version in sync with the desktop release
+          # tag (e.g. tag v3.0.0 -> APP_VERSION=3.0.0) instead of the static
+          # `version` in buildozer.spec. Falls back to that static value for
+          # manual workflow_dispatch runs not triggered by a tag.
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            echo "value=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Pull official Buildozer image
         run: docker pull kivy/buildozer:latest
 
@@ -47,9 +60,14 @@ jobs:
         # the documented docker run invocation this follows.
         run: |
           mkdir -p "$HOME/.buildozer"
+          version_env=()
+          if [ -n "${{ steps.version.outputs.value }}" ]; then
+            version_env=(--env "APP_VERSION=${{ steps.version.outputs.value }}")
+          fi
           docker run --rm \
             --volume "$HOME/.buildozer":/home/user/.buildozer \
             --volume "$GITHUB_WORKSPACE":/home/user/hostcwd \
+            "${version_env[@]}" \
             --env P4A_RELEASE_KEYSTORE=/home/user/hostcwd/release.keystore \
             --env P4A_RELEASE_KEYSTORE_PASSWD="${{ secrets.P4A_RELEASE_KEYSTORE_PASSWD }}" \
             --env P4A_RELEASE_KEYALIAS="${{ secrets.P4A_RELEASE_KEYALIAS }}" \
