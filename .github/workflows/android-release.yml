@@ -53,6 +53,18 @@ jobs:
       - name: Pull official Buildozer image
         run: docker pull kivy/buildozer:latest
 
+      - name: Debug workspace and container mount
+        run: |
+          echo "== on host =="
+          echo "PWD: $(pwd)"
+          echo "GITHUB_WORKSPACE: $GITHUB_WORKSPACE"
+          ls -la "$GITHUB_WORKSPACE"
+          echo "== inside container (WORKDIR, default entrypoint bypassed) =="
+          docker run --rm --entrypoint /bin/bash \
+            --volume "$GITHUB_WORKSPACE":/home/user/hostcwd \
+            kivy/buildozer:latest \
+            -c "pwd && ls -la /home/user/hostcwd"
+
       - name: Build with Buildozer
         # Runs the official kivy/buildozer Docker image directly instead of a
         # third-party wrapper action, since this step has access to the
