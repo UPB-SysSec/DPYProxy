@@ -32,6 +32,8 @@ jobs:
         with:
           path: ~/.buildozer
           key: buildozer-global-${{ hashFiles('buildozer.spec') }}
+          restore-keys: |
+            buildozer-global-
 
       - name: Decode release keystore
         run: |
