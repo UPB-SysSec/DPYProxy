@@ -605,8 +605,12 @@ class DPYProxyApp(App):
         ))
 
         mockup = build_phone_mockup('127.0.0.1', str(cfg['tls_port']))
-        mockup_wrap = AnchorLayout(size_hint_y=None, height=dp(190), padding=(dp(20), 0))
+        mockup_wrap = AnchorLayout(size_hint_y=None, padding=(dp(20), 0))
         mockup_wrap.add_widget(mockup)
+        # The mockup's real height depends on font metrics, which vary by
+        # device DPI — a fixed guess here overflowed into the text above it
+        # on some screens. Track the actual (Card-computed) height instead.
+        mockup.bind(height=lambda _inst, val, wrap=mockup_wrap: setattr(wrap, 'height', val))
         steps_card.add_widget(mockup_wrap)
 
         steps_card.add_widget(step_row(
