@@ -101,9 +101,19 @@ GREEN = (0.22, 0.78, 0.42, 1)
 RED = (0.87, 0.29, 0.29, 1)
 AMBER = (0.93, 0.69, 0.13, 1)
 
+# Colors for the Android settings mockup — deliberately a light Material-ish
+# palette (unlike the app's own dark theme) so it reads as "a screenshot of
+# something else", the way a real phone screenshot would look pasted in.
+PHONE_BEZEL = (0.03, 0.04, 0.05, 1)
+SCREEN_BG = (0.97, 0.97, 0.98, 1)
+SCREEN_FIELD = (0.91, 0.92, 0.94, 1)
+SCREEN_TEXT = (0.11, 0.12, 0.13, 1)
+SCREEN_TEXT_DIM = (0.44, 0.47, 0.50, 1)
+ANDROID_BLUE = (0.10, 0.45, 0.91, 1)
+
 
 class Card(BoxLayout):
-    def __init__(self, **kwargs):
+    def __init__(self, bg_color=CARD, radius=12, **kwargs):
         kwargs.setdefault('orientation', 'vertical')
         kwargs.setdefault('padding', (dp(14), dp(12)))
         kwargs.setdefault('spacing', dp(8))
@@ -111,8 +121,8 @@ class Card(BoxLayout):
         super().__init__(**kwargs)
         self.bind(minimum_height=self.setter('height'))
         with self.canvas.before:
-            Color(*CARD)
-            self._bg = RoundedRectangle(pos=self.pos, size=self.size, radius=[dp(12)])
+            Color(*bg_color)
+            self._bg = RoundedRectangle(pos=self.pos, size=self.size, radius=[dp(radius)])
         self.bind(pos=self._update_bg, size=self._update_bg)
 
     def _update_bg(self, *_a):
@@ -158,6 +168,139 @@ class StatusDot(Widget):
 
     def set_color(self, color):
         self._color.rgba = color
+
+
+class NumberBadge(BoxLayout):
+    """A small filled circle with a number in it, used for step indicators."""
+
+    def __init__(self, number: int, **kwargs):
+        kwargs.setdefault('size_hint', (None, None))
+        kwargs.setdefault('size', (dp(26), dp(26)))
+        super().__init__(**kwargs)
+        with self.canvas.before:
+            Color(*GREEN)
+            self._circle = Ellipse(pos=self.pos, size=self.size)
+        self.bind(pos=self._update, size=self._update)
+        label = Label(text=str(number), bold=True, font_size='13sp', color=BG)
+        self.add_widget(label)
+
+    def _update(self, *_a):
+        self._circle.pos = self.pos
+        self._circle.size = self.size
+
+
+def step_row(number: int, title: str, body: str) -> BoxLayout:
+    row = BoxLayout(orientation='horizontal', size_hint_y=None, spacing=dp(12), padding=(0, dp(2)))
+    badge_holder = AnchorLayout(anchor_y='top', size_hint=(None, 1), width=dp(26))
+    badge_holder.add_widget(NumberBadge(number))
+    row.add_widget(badge_holder)
+
+    text_box = BoxLayout(orientation='vertical', spacing=dp(2))
+    title_lbl = Label(
+        text=title, bold=True, font_size='14sp', color=TEXT,
+        halign='left', valign='top', size_hint_y=None,
+    )
+    title_lbl.bind(width=lambda *_a: title_lbl.setter('text_size')(title_lbl, (title_lbl.width, None)))
+    title_lbl.bind(texture_size=lambda *_a: title_lbl.setter('height')(title_lbl, title_lbl.texture_size[1]))
+    body_lbl = Label(
+        text=body, font_size='13sp', color=TEXT_DIM,
+        halign='left', valign='top', size_hint_y=None,
+    )
+    body_lbl.bind(width=lambda *_a: body_lbl.setter('text_size')(body_lbl, (body_lbl.width, None)))
+    body_lbl.bind(texture_size=lambda *_a: body_lbl.setter('height')(body_lbl, body_lbl.texture_size[1]))
+    text_box.add_widget(title_lbl)
+    text_box.add_widget(body_lbl)
+    text_box.bind(minimum_height=text_box.setter('height'))
+    row.add_widget(text_box)
+
+    row.bind(minimum_height=row.setter('height'))
+    text_box.size_hint_y = None
+    return row
+
+
+def info_box(text: str, accent=ANDROID_BLUE) -> BoxLayout:
+    """A callout card with a colored left accent bar, for tips/warnings."""
+    outer = BoxLayout(orientation='horizontal', size_hint_y=None, spacing=0)
+    bar = Widget(size_hint=(None, 1), width=dp(3))
+    with bar.canvas:
+        Color(*accent)
+        bar_rect = RoundedRectangle(pos=bar.pos, size=bar.size, radius=[dp(1.5)])
+    bar.bind(pos=lambda *_a: setattr(bar_rect, 'pos', bar.pos), size=lambda *_a: setattr(bar_rect, 'size', bar.size))
+
+    card = Card(bg_color=FIELD, padding=(dp(12), dp(10)))
+    lbl = Label(
+        text=text, font_size='12sp', color=TEXT_DIM,
+        halign='left', valign='top', size_hint_y=None,
+    )
+    lbl.bind(width=lambda *_a: lbl.setter('text_size')(lbl, (lbl.width, None)))
+    lbl.bind(texture_size=lambda *_a: lbl.setter('height')(lbl, lbl.texture_size[1]))
+    card.add_widget(lbl)
+
+    outer.add_widget(bar)
+    outer.add_widget(card)
+    outer.bind(minimum_height=outer.setter('height'))
+    card.size_hint_x = 1
+    return outer
+
+
+def phone_field(label_text: str, value_text: str, value_color=SCREEN_TEXT) -> BoxLayout:
+    """One labeled row inside the phone mockup, styled like an Android settings field."""
+    row = BoxLayout(orientation='vertical', size_hint_y=None, height=dp(46), spacing=dp(2))
+    lbl = Label(
+        text=label_text, font_size='10sp', color=SCREEN_TEXT_DIM,
+        halign='left', valign='bottom', size_hint_y=None, height=dp(14),
+    )
+    lbl.bind(size=lbl.setter('text_size'))
+    val = Label(
+        text=value_text, font_size='14sp', color=value_color, bold=True,
+        halign='left', valign='top', size_hint_y=None, height=dp(20),
+    )
+    val.bind(size=val.setter('text_size'))
+    row.add_widget(lbl)
+    row.add_widget(val)
+    return row
+
+
+def build_phone_mockup(proxy_host: str, proxy_port: str) -> Widget:
+    """A stylized mockup of Android's Wi-Fi 'Edit network' proxy dialog."""
+    bezel = Card(bg_color=PHONE_BEZEL, radius=22, padding=(dp(8), dp(8)), spacing=0)
+    bezel.size_hint_x = 1
+
+    screen = Card(bg_color=SCREEN_BG, radius=14, padding=(dp(14), dp(12)), spacing=dp(10))
+    screen.size_hint_x = 1
+
+    header = Label(
+        text='Edit network', bold=True, font_size='15sp', color=SCREEN_TEXT,
+        halign='left', valign='middle', size_hint_y=None, height=dp(22),
+    )
+    header.bind(size=header.setter('text_size'))
+    screen.add_widget(header)
+
+    proxy_toggle_row = BoxLayout(orientation='horizontal', size_hint_y=None, height=dp(40))
+    proxy_toggle_lbl = Label(
+        text='Proxy', font_size='13sp', color=SCREEN_TEXT,
+        halign='left', valign='middle', size_hint_x=0.5,
+    )
+    proxy_toggle_lbl.bind(size=proxy_toggle_lbl.setter('text_size'))
+    manual_pill = Card(bg_color=ANDROID_BLUE, radius=14, padding=(dp(12), dp(6)))
+    manual_pill.size_hint = (None, None)
+    manual_pill.size = (dp(80), dp(28))
+    manual_pill.add_widget(Label(text='Manual', font_size='12sp', bold=True, color=(1, 1, 1, 1)))
+    pill_anchor = AnchorLayout(anchor_x='right', size_hint_x=0.5)
+    pill_anchor.add_widget(manual_pill)
+    proxy_toggle_row.add_widget(proxy_toggle_lbl)
+    proxy_toggle_row.add_widget(pill_anchor)
+    screen.add_widget(proxy_toggle_row)
+
+    screen.add_widget(phone_field('Proxy hostname', proxy_host, ANDROID_BLUE))
+    screen.add_widget(phone_field('Proxy port', proxy_port, ANDROID_BLUE))
+
+    save_row = AnchorLayout(anchor_x='right', size_hint_y=None, height=dp(30))
+    save_row.add_widget(Label(text='SAVE', bold=True, font_size='13sp', color=ANDROID_BLUE, size_hint=(None, None), size=(dp(60), dp(24))))
+    screen.add_widget(save_row)
+
+    bezel.add_widget(screen)
+    return bezel
 
 
 def section_label(text: str) -> Label:
@@ -243,10 +386,13 @@ class DPYProxyApp(App):
         tabs = BoxLayout(size_hint_y=None, height=dp(40), spacing=dp(8))
         self.tab_log_btn = self._make_tab_button('Log', active=True)
         self.tab_settings_btn = self._make_tab_button('Settings', active=False)
+        self.tab_guide_btn = self._make_tab_button('Setup Guide', active=False)
         self.tab_log_btn.bind(on_press=lambda *_: self._show_tab('log'))
         self.tab_settings_btn.bind(on_press=lambda *_: self._show_tab('settings'))
+        self.tab_guide_btn.bind(on_press=lambda *_: self._show_tab('guide'))
         tabs.add_widget(self.tab_log_btn)
         tabs.add_widget(self.tab_settings_btn)
+        tabs.add_widget(self.tab_guide_btn)
         root.add_widget(tabs)
 
         self.content_area = BoxLayout(size_hint_y=1)
@@ -254,6 +400,7 @@ class DPYProxyApp(App):
 
         self._log_panel = self._build_log_panel()
         self._settings_panel = self._build_settings_panel()
+        self._guide_panel = self._build_guide_panel()
         self._show_tab('log')
 
         root.add_widget(self._build_button_row())
@@ -326,16 +473,12 @@ class DPYProxyApp(App):
 
     def _show_tab(self, which: str):
         self.content_area.clear_widgets()
-        if which == 'log':
-            self.content_area.add_widget(self._log_panel)
-            self.tab_log_btn._base_color = FIELD
-            self.tab_settings_btn._base_color = CARD
-        else:
-            self.content_area.add_widget(self._settings_panel)
-            self.tab_log_btn._base_color = CARD
-            self.tab_settings_btn._base_color = FIELD
-        self.tab_log_btn._update()
-        self.tab_settings_btn._update()
+        panels = {'log': self._log_panel, 'settings': self._settings_panel, 'guide': self._guide_panel}
+        buttons = {'log': self.tab_log_btn, 'settings': self.tab_settings_btn, 'guide': self.tab_guide_btn}
+        self.content_area.add_widget(panels[which])
+        for key, btn in buttons.items():
+            btn._base_color = FIELD if key == which else CARD
+            btn._update()
 
     def _build_log_panel(self):
         card = Card(size_hint_y=1, padding=(dp(2), dp(2)))
@@ -413,6 +556,80 @@ class DPYProxyApp(App):
             self.f_tls_tcp_frag, self.f_tls_frag_size, self.f_dns_port,
             self.f_dns_mode, self.f_dns_timeout,
         ]
+
+        outer.add_widget(content)
+        return outer
+
+    def _build_guide_panel(self):
+        cfg = load_config()
+
+        outer = ScrollView(size_hint_y=1)
+        content = BoxLayout(orientation='vertical', size_hint_y=None, spacing=dp(14))
+        content.bind(minimum_height=content.setter('height'))
+
+        intro = Label(
+            text=(
+                'DPYProxy only sees traffic that Android sends it. Configure it as your '
+                "Wi-Fi network's proxy so apps route their HTTP(S) traffic through it."
+            ),
+            font_size='12sp', color=TEXT_DIM, size_hint_y=None,
+            halign='left', valign='top',
+        )
+        intro.bind(width=lambda *_a: intro.setter('text_size')(intro, (intro.width, None)))
+        intro.bind(texture_size=lambda *_a: intro.setter('height')(intro, intro.texture_size[1]))
+        content.add_widget(intro)
+
+        steps_card = Card(spacing=dp(14))
+        steps_card.add_widget(section_label('Step-by-step'))
+        steps_card.add_widget(step_row(
+            1, 'Start the proxy',
+            'Open the Log tab and tap Start. Wait for the status at the top to show Running.',
+        ))
+        steps_card.add_widget(step_row(
+            2, 'Open Wi-Fi settings',
+            'On your device: Settings -> Network & internet -> Wi-Fi '
+            '(Samsung: Settings -> Connections -> Wi-Fi).',
+        ))
+        steps_card.add_widget(step_row(
+            3, 'Edit your network',
+            'Tap the gear icon next to the Wi-Fi network you are connected to, '
+            'or long-press it, then choose "Modify network".',
+        ))
+        steps_card.add_widget(step_row(
+            4, 'Expand advanced options',
+            'Tap "Advanced options" (or the small arrow) to reveal the Proxy setting.',
+        ))
+        steps_card.add_widget(step_row(
+            5, 'Set the proxy to Manual',
+            'Change Proxy from None to Manual, then fill in the hostname and port shown below:',
+        ))
+
+        mockup = build_phone_mockup('127.0.0.1', str(cfg['tls_port']))
+        mockup_wrap = AnchorLayout(size_hint_y=None, height=dp(190), padding=(dp(20), 0))
+        mockup_wrap.add_widget(mockup)
+        steps_card.add_widget(mockup_wrap)
+
+        steps_card.add_widget(step_row(
+            6, 'Save',
+            'Tap Save. Apps that use the system proxy will now route their traffic through DPYProxy.',
+        ))
+        content.add_widget(steps_card)
+
+        content.add_widget(info_box(
+            f'Hostname and port always match the TLS Proxy settings on the Settings tab '
+            f'(currently port {cfg["tls_port"]}). If you change the port there, update it here too.',
+            accent=ANDROID_BLUE,
+        ))
+        content.add_widget(info_box(
+            'Menu names vary slightly by Android version and manufacturer, but the '
+            'Proxy hostname / Proxy port fields work the same way on every device.',
+            accent=GREEN,
+        ))
+        content.add_widget(info_box(
+            'Only apps that respect the system proxy setting are covered this way — some '
+            'apps use raw sockets and bypass it entirely. See the README for details.',
+            accent=AMBER,
+        ))
 
         outer.add_widget(content)
         return outer
