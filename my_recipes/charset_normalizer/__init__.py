@@ -14,9 +14,9 @@ from pythonforandroid.recipe import PythonRecipe
 
 
 class CharsetNormalizerRecipe(PythonRecipe):
-    name = 'charset_normalizer'
-    version = '3.3.2'
-    url = 'https://files.pythonhosted.org/packages/63/09/c1bc53dab74b1816a00d8d030de5bf98f724c52c1635e07681d312f20be8/charset-normalizer-{version}.tar.gz'
+    name = "charset_normalizer"
+    version = "3.3.2"
+    url = "https://files.pythonhosted.org/packages/63/09/c1bc53dab74b1816a00d8d030de5bf98f724c52c1635e07681d312f20be8/charset-normalizer-{version}.tar.gz"
     depends = []
     call_hostpython_via_targetpython = False
 
