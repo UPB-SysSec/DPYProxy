@@ -276,6 +276,11 @@ DPYProxy can also run on Android as a Kivy app with a foreground service. The TL
 and the DNS module on port 5533, both bound to `localhost`. Configure the app as your system's WLAN proxy
 (`127.0.0.1:4433`) to route HTTP(S) traffic through it. The HTTP module is disabled by default on Android.
 
+The Android app's entry point is `android_main.py`, not `main.py` — `main.py` is the desktop CLI (see
+[Requirements](#requirements) above). python-for-android hardcodes its app entry point filename to `main.py`
+with no buildozer.spec option to change it, so building for Android needs `android_main.py` copied into that
+place first; see [Building](#building) below.
+
 ## Requirements
 
 - python3 and a virtual environment (`python3 -m venv .venv && source .venv/bin/activate`)
@@ -285,10 +290,13 @@ and the DNS module on port 5533, both bound to `localhost`. Configure the app as
 
 ## Building
 
-The build configuration lives in `buildozer.spec`. To build the debug APK without deploying it to a device:
+The build configuration lives in `buildozer.spec`. Build with `scripts/build-android.sh` instead of calling
+`buildozer` directly — it copies `android_main.py` into `main.py`'s place for the build and restores the real
+(desktop CLI) `main.py` afterward, even if the build fails. To build the debug APK without deploying it to a
+device:
 
 ```sh
-buildozer android debug
+./scripts/build-android.sh android debug
 ```
 
 The first build downloads the Android SDK/NDK and compiles all recipes, which can take a while. Subsequent
@@ -307,7 +315,7 @@ adb connect <ip>:<connect-port>
 Build, install, launch, and stream the device log in one step:
 
 ```sh
-buildozer android debug deploy run logcat
+./scripts/build-android.sh android debug deploy run logcat
 ```
 
 ## Configuration

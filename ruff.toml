@@ -13,9 +13,10 @@ lint.select = ["E", "F", "I"]
 # Never enforce these rules
 lint.ignore = []
 
-# main.py and services/service.py must mock out heavy/incompatible modules
-# (aioquic, dns.quic, ...) before importing anything that transitively pulls
-# them in — that puts real imports below non-import code by necessity.
+# android_main.py and services/service.py must mock out heavy/incompatible
+# modules (aioquic, dns.quic, ...) before importing anything that
+# transitively pulls them in — that puts real imports below non-import code
+# by necessity.
 [lint.per-file-ignores]
-"main.py" = ["E402"]
+"android_main.py" = ["E402"]
 "services/service.py" = ["E402"]

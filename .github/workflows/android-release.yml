@@ -71,6 +71,15 @@ jobs:
             echo "value=" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Put the Android entry point in place
+        # python-for-android hardcodes the app entry point filename to
+        # main.py — there's no buildozer.spec option to change it. main.py
+        # in this repo is the desktop CLI, so the Kivy app (android_main.py)
+        # is swapped into its place for this (ephemeral) checkout only. See
+        # scripts/build-android.sh for the equivalent local-dev workflow,
+        # which restores the real main.py afterward.
+        run: cp android_main.py main.py
+
       - name: Pull official Buildozer image
         run: docker pull kivy/buildozer:latest
 

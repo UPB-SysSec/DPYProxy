@@ -4,10 +4,10 @@ from unittest.mock import patch
 import pytest
 
 from enumerators.Modules import Modules
+from main import extract_activated_modules, main
 from modules.dns.DnsModule import DnsModule
 from modules.http.HttpModule import HttpModule
 from modules.tls.TlsModule import TlsModule
-from old_main import extract_activated_modules, main
 
 
 def test_extract_activated_modules_default():
@@ -65,8 +65,8 @@ def test_extract_activated_modules_enable_all():
         assert HttpModule in active_classes
 
 
-@patch("old_main.threading.Thread")
-@patch("old_main.time.sleep")
+@patch("main.threading.Thread")
+@patch("main.time.sleep")
 def test_main_execution(mock_sleep, mock_thread):
     """
     Test the main entry-point execution flow, ensuring it sets up proxy threads
