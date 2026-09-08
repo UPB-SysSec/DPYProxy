@@ -4,6 +4,7 @@ from enumerators.DnsProxyMode import DnsProxyMode
 from modules.dns.DnsProxy import DnsProxy
 from modules.Module import Module
 from network.NetworkAddress import NetworkAddress
+from util.Util import port_range
 
 
 class DnsModule(Module):
@@ -39,7 +40,7 @@ class DnsModule(Module):
 
         dns_module.add_argument("--dns_host", type=str, default="127.0.0.1", help="Address the proxy server runs on")
 
-        dns_module.add_argument("--dns_port", type=int, default=5533, help="Port the proxy server runs on")
+        dns_module.add_argument("--dns_port", type=port_range, default=5533, help="Port the proxy server runs on")
 
         dns_module.add_argument(
             "--dns_resolver_host",
@@ -50,7 +51,7 @@ class DnsModule(Module):
 
         dns_module.add_argument(
             "--dns_resolver_port",
-            type=str,
+            type=port_range,
             default=None,
             help="DNS resolver port. If set, must correspond to the selected dns_mode. If unset, port is chosen "
             "based on the chosen or determined mode's standard port",
@@ -61,7 +62,7 @@ class DnsModule(Module):
             type=str,
             default="www.google.dj",
             help="A domain name censored in your location. Used to determine working circumventions methods. "
-            "Specify together with --dns_censored_domain_ip",
+            "Specify together with --dns_compare_ip_ranges",
         )
 
         dns_module.add_argument(
@@ -75,13 +76,13 @@ class DnsModule(Module):
         dns_module.add_argument(
             "--dns_block_page_ips",
             default=False,
-            help="Whether the given IP ranges to compare are block page IPs or not. Default is False.",
+            help="Whether the given IP ranges to compare are block page IPs or not.",
         )
 
         dns_module.add_argument(
             "--dns_add_sni",
             default=True,
-            help="Whether or not to include the SNI for encrypted DNS modes. Defaults to True.",
+            help="Whether or not to include the SNI for encrypted DNS modes.",
         )
 
         dns_module.add_argument(
@@ -94,7 +95,7 @@ class DnsModule(Module):
 
     def extract_parameters(self, args: Namespace):
         self.server_address = NetworkAddress(args.dns_host, args.dns_port)
-        resolver_address = NetworkAddress(args.dns_resolver_host, args.dns_port)
+        resolver_address = NetworkAddress(args.dns_resolver_host, args.dns_resolver_port)
 
         self.proxy = DnsProxy(
             proxy_mode=args.dns_mode,

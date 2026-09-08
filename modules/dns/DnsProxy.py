@@ -18,6 +18,7 @@ from network.DomainResolver import DomainResolver
 from network.NetworkAddress import NetworkAddress
 from network.protocols.Dns import Dns
 from network.tcp.WrappedTcpSocket import WrappedTcpSocket
+from util.Util import is_valid_ipv6_address
 
 
 class DnsProxy:
@@ -49,11 +50,16 @@ class DnsProxy:
         self.working_resolver_configuration = working_resolver_configuration
 
         # initialize UDP and TCP server sockets
-        self.udp_server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        _af = socket.AF_INET6 if is_valid_ipv6_address(address.host) else socket.AF_INET
+        self.udp_server = socket.socket(_af, socket.SOCK_DGRAM)
         self.udp_server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        if _af == socket.AF_INET6:
+            self.udp_server.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 1)
         self.udp_server.settimeout(timeout)
-        self.tcp_server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.tcp_server = socket.socket(_af, socket.SOCK_STREAM)
         self.tcp_server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        if _af == socket.AF_INET6:
+            self.tcp_server.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 1)
         self.udp_server.settimeout(timeout)
         self.continue_processing = True
 
@@ -66,7 +72,7 @@ class DnsProxy:
     def handle_udp(self, message: bytes, address: NetworkAddress):
         answer = self.resolve_message(message, address)
         self.udp_server.sendto(answer.to_wire(), (address.host, address.port))
-        logging.info(f"{address.host}:{address.port}: request resolved")
+        logging.info(f"{address.host}:{address.port}: resolved UDP request and sent response")
 
     def handle_tcp(self, client_socket: WrappedTcpSocket, address: NetworkAddress):
         try:
@@ -81,6 +87,9 @@ class DnsProxy:
             answer = self.resolve_message(request=request, address=address)
             if answer is not None:
                 client_socket.send(answer.to_wire(prepend_length=True))
+                logging.info(f"{address.host}:{address.port}: resolved TCP request and sent response")
+            else:
+                logging.warning(f"{address.host}:{address.port}: could not resolve TCP DNS request")
 
     def resolve_message(self, request: bytes, address: NetworkAddress) -> Message | None:
         """
@@ -130,7 +139,7 @@ class DnsProxy:
             ).generate_working_resolver(self.proxy_mode)
             yield from _gen
 
-        elif self.resolver_address.port is not None:
+        elif self.resolver_address.port is None:
             logging.info(
                 f"mode {self.proxy_mode} and resolver {self.resolver_address.host} specified. Setting standard "
                 f"port {self.proxy_mode.default_port()}."
@@ -246,7 +255,7 @@ class DnsProxy:
         """
         # opening server socket
         self.udp_server.bind((self.address.host, self.address.port))
-        print(f"### Started UDP DNS server on {self.address.host}:{self.address.port} ###")
+        logging.info(f"### Started UDP DNS server on {self.address.host}:{self.address.port} ###")
 
         while self.continue_processing:
             readable, _, _ = select.select([self.udp_server], [], [], 1)
@@ -267,7 +276,7 @@ class DnsProxy:
         # opening server socket
         self.tcp_server.bind((self.address.host, self.address.port))
         self.tcp_server.listen()
-        print(f"### Started TCP DNS server on {self.address.host}:{self.address.port} ###")
+        logging.info(f"### Started TCP DNS server on {self.address.host}:{self.address.port} ###")
 
         while self.continue_processing:
             readable, _, _ = select.select([self.tcp_server], [], [], 1)

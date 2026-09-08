@@ -1,3 +1,4 @@
+import argparse
 import logging
 import socket
 
@@ -12,7 +13,20 @@ def is_valid_ipv4_address(ip_address: str) -> bool:
     :return: Whether the given string is a valid ip address
     """
     try:
-        socket.inet_aton(ip_address)
+        socket.inet_pton(socket.AF_INET, ip_address)
+        return True
+    except socket.error:
+        return False
+
+
+def is_valid_ipv6_address(ip_address: str) -> bool:
+    """
+    Returns whether the given string is a valid ipv6 address.
+    :param ip_address: String to check for ipv6 validity
+    :return: Whether the given string is a valid ip address
+    """
+    try:
+        socket.inet_pton(socket.AF_INET6, ip_address)
         return True
     except socket.error:
         return False
@@ -60,3 +74,13 @@ def parse_all_ips(answer: dns.message.Message) -> list[str]:
                 f"Could not extract IP from DNS response with exception {e}:\n{_name}, {_rdclass}, {_rdtype}; None"
             )
     return resolved_ips
+
+
+def port_range(value):
+    try:
+        ivalue = int(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"{value} is an invalid port. Must be a number between 1 and 65535.")
+    if ivalue < 1 or ivalue > 65535:
+        raise argparse.ArgumentTypeError(f"{value} is an invalid port. Must be between 1 and 65535.")
+    return ivalue

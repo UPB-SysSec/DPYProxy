@@ -26,7 +26,7 @@ from enumerators.DnsProxyMode import DnsProxyMode
 from exception.DnsException import DnsException
 from network.NetworkAddress import NetworkAddress
 from network.tcp.WrappedTcpSocket import WrappedTcpSocket
-from util.Util import parse_all_ips
+from util.Util import is_valid_ipv4_address, parse_all_ips
 
 
 def fix_transaction_id(f):
@@ -103,7 +103,18 @@ class DomainResolver:
         """
         Resolves the given domain to an ip address using the system's DNS resolver.
         """
-        return socket.gethostbyname(domain)
+        try:
+            results = socket.getaddrinfo(domain, None, socket.AF_UNSPEC, socket.SOCK_STREAM)
+            # if IPv4
+            for family, _, _, _, sockaddr in results:
+                if family == socket.AF_INET:
+                    return sockaddr[0]
+            for family, _, _, _, sockaddr in results:
+                if family == socket.AF_INET6:
+                    return sockaddr[0]
+        except socket.gaierror:
+            pass
+        raise DnsException(f"Could not resolve domain {domain} using system resolver")
 
     @staticmethod
     @fix_transaction_id
@@ -303,17 +314,19 @@ class DomainResolver:
     def resolve_udp_static_to_ip(domain: str, resolver: NetworkAddress, timeout: int) -> str:
         """
         Resolves the given domain to an ip address using DNS over UDP on the given DNS resolver.
+        Tries A records first, then AAAA records.
         :param domain: the domain to resolve
         :param resolver: the DNS resolver to use
         :param timeout: the DNS request timeout
         :return: The resolved ip address
         """
-        message = dns.message.make_query(domain, "A")
-        response = DomainResolver.resolve_udp_static(message, resolver, timeout)
-        ips = parse_all_ips(response)
-        if not ips or len(ips) == 0:
-            raise DnsException(f"No IPs found for domain {domain} using resolver {resolver}")
-        return ips[0]
+        for rtype in ("A", "AAAA"):
+            message = dns.message.make_query(domain, rtype)
+            response = DomainResolver.resolve_udp_static(message, resolver, timeout)
+            ips = parse_all_ips(response)
+            if ips and len(ips) > 0:
+                return ips[0]
+        raise DnsException(f"No IPs found for domain {domain} using resolver {resolver}")
 
     @staticmethod
     def resolve_udp_static(message: Message, resolver: NetworkAddress, timeout: int) -> Message:
@@ -370,7 +383,8 @@ class DomainResolver:
         :return: the last DNS response message received from the server in the given timeout
         """
         # create udp socket
-        _socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        _af = socket.AF_INET if is_valid_ipv4_address(resolver.host) else socket.AF_INET6
+        _socket = socket.socket(_af, socket.SOCK_DGRAM)
         _socket.setblocking(False)
         _address = (resolver.host, resolver.port)
         # send message to server
@@ -466,7 +480,13 @@ class DomainResolver:
                 logging.debug(f"Could not resolve to {self.resolver} for mode {self.dns_mode} with exception {e}")
             else:
                 working += 1
-        return working >= DomainResolver.THRESHOLD_CONFIRM_WORKING
+        reachable = working >= DomainResolver.THRESHOLD_CONFIRM_WORKING
+        logging.debug(
+            f"Reachability check for {self.resolver} ({self.dns_mode}): "
+            f"{working}/{DomainResolver.TRIES_CONFIRM_WORKING} succeeded - "
+            f"{'REACHABLE' if reachable else 'UNREACHABLE'}"
+        )
+        return reachable
 
     def __str__(self):
         return f"{self.dns_mode} - {self.resolver}"

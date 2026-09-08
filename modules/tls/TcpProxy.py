@@ -8,6 +8,7 @@ from enumerators.TlsVersion import TlsVersion
 from network.NetworkAddress import NetworkAddress
 from network.tcp.TcpConnectionHandler import TcpConnectionHandler
 from network.tcp.WrappedTcpSocket import WrappedTcpSocket
+from util.Util import is_valid_ipv6_address
 
 
 class TcpProxy:
@@ -53,8 +54,12 @@ class TcpProxy:
         self.forward_proxy = forward_proxy
         self.forward_proxy_mode = forward_proxy_mode
         self.forward_proxy_resolve_address = forward_proxy_resolve_address
-        self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+        _af = socket.AF_INET6 if is_valid_ipv6_address(address.host) else socket.AF_INET
+        self.server = socket.socket(_af, socket.SOCK_STREAM)
         self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        if _af == socket.AF_INET6:
+            self.server.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 1)
         self.continue_processing = True
 
     def handle(self, client_socket: WrappedTcpSocket, address: NetworkAddress):
@@ -83,11 +88,11 @@ class TcpProxy:
         # opening server socket
         self.server.bind((self.address.host, self.address.port))
         self.server.listen()
-        print(f"### Started TCP proxy on {self.address.host}:{self.address.port} ###")
+        logging.info(f"### Started TCP proxy on {self.address.host}:{self.address.port} ###")
         if self.dns_server:
-            logging.debug(f"Using DNS server {self.dns_server}")
+            logging.info(f"Using DNS server {self.dns_server}")
         if self.forward_proxy:
-            logging.debug(f"Using forward proxy {self.forward_proxy}")
+            logging.info(f"Using forward proxy {self.forward_proxy}")
         while self.continue_processing:
             readable, _, _ = select.select([self.server], [], [], 1)
             if not readable:
@@ -100,7 +105,6 @@ class TcpProxy:
                 return
             address = NetworkAddress(address[0], address[1])
             client_socket = WrappedTcpSocket(self.timeout, client_socket)
-            logging.info(f"request from {address.host}:{address.port}")
             # spawn a new thread that runs the function handle()
             threading.Thread(target=self.handle, args=(client_socket, address)).start()
         logging.info("### Stopped proxy ###")

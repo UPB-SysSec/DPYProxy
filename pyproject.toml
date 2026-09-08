@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "dpyproxy"
-version = "2.2.1"
+version = "3.0.0"
 description = "Python proxy that implements DPI evasion mechanisms (TLS record fragmentation, TCP segmentation, encrypted DNS, HTTP)"
 readme = "README.md"
 license = "Apache-2.0"
@@ -53,10 +53,10 @@ dependencies = [
     "pyOpenSSL>=26.3.0",
     "service-identity>=26.1.0",
     "sniffio>=1.3.1",
-    "pytest>=9.1.0",
-    "ruff>=0.15.17",
     # exceptiongroup backport: needed on Python 3.10 (built-in from 3.11+)
     "exceptiongroup>=1.2.2; python_version < '3.11'",
+    # tomli: needed on Python 3.10 (built-in from 3.11+)
+    "tomli>=2.0.1; python_version < '3.11'",
     # typing_extensions backport: needed on Python 3.10/3.11
     "typing_extensions>=4.12.2; python_version < '3.12'",
 
@@ -99,3 +99,28 @@ include = [
     "main.py",
     "README.md",
 ]
+
+[tool.coverage.run]
+omit = [
+    "test/*",
+    "**/__init__.py",
+    "**/__main__.py",
+]
+
+# Adds the project root directory to Python's search path so tests can locate local code modules.
+[tool.pytest.ini_options]
+pythonpath = ["."]
+
+
+[tool.hatch.envs.test]
+dependencies = [
+    "pytest>=9.1.0",
+    "pytest-cov>=7.1.0",
+    "ruff>=0.15.17",
+]
+
+[tool.hatch.envs.test.scripts]
+tests-coverage = "pytest --cov=. --cov-report=term-missing test/"
+lint = "ruff check ."
+formatter = "ruff format --check ."
+

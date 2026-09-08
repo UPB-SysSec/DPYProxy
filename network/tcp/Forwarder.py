@@ -32,6 +32,7 @@ class Forwarder:
         self.http_smuggling_uncensored_url = http_smuggling_uncensored_url
 
     def start(self):
+        logging.info(f"Forwarding: {self.socket1_name} <-> {self.socket2_name}")
         # start sending thread
         threading.Thread(
             target=self._forward,
@@ -80,25 +81,29 @@ class Forwarder:
                     if not self.attempt_tls_fragmentation(
                         from_socket, to_socket, direction, record_frag, record_version
                     ):
-                        # turn of record frag and force normal forwarding
+                        # turn off record frag and force normal forwarding
                         alter_tls = False
+                        self.debug(
+                            "TLS record fragmentation no longer applicable, switching to plain forwarding", direction
+                        )
                         continue
 
                 elif http_strategy is not None:
                     if not self.attempt_http_manipulations(from_socket, to_socket, direction, http_strategy):
-                        # turn of htt manipulations and force normal forwarding
+                        # turn off http manipulations and force normal forwarding
                         http_strategy = None
+                        self.debug("HTTP manipulations no longer applicable, switching to plain forwarding", direction)
                         continue
                 else:
                     # normal forwarding
                     data = from_socket.recv(STANDARD_SOCKET_RECEIVE_SIZE)
                     if not data:
-                        self.debug("Connection closed, closing both sockets", direction)
+                        self.debug("No data received from remote end. Closing connection.", direction)
                         to_socket.try_close()
                         break
                     else:
                         to_socket.send(data)
-            logging.info("### Cancelled forwarding ###")
+            self.info("Forwarding stopped normally", direction)
         except BrokenPipeError as e:
             self.debug(f"Forwarding broken with {e}", direction)
             to_socket.try_close()
@@ -112,7 +117,7 @@ class Forwarder:
         except Exception as e:
             self.debug(f"Exception while forwarding: {e}", direction)
             to_socket.try_close()
-        self.info(f"{direction}: Closed connection", direction)
+        self.debug("Forwarding thread exiting", direction)
 
     def attempt_http_manipulations(
         self, from_socket: WrappedTcpSocket, to_socket: WrappedTcpSocket, direction: str, http_strategy
@@ -176,6 +181,7 @@ class Forwarder:
         if record_frag:
             record = self.fragment_record(base_header, record_len, record[5:])
         to_socket.send(record)
+        self.debug(f"Successfully forwarded TLS record ({record_len} bytes)", direction)
         return True
 
     def fragment_record(self, record_base_header: bytes, record_length: int, record_body: bytes) -> bytes:

@@ -2,7 +2,8 @@
 DPYProxy is a python proxy that implements DPI evasion mechanisms. To circumvent TLS censorship, TLS record fragmentation and TCP
 segmentation are implemented. To circumvent DNS censorship, DPYProxy uses encrypted DNS and TCP segmentation. All DPI evasion mechanisms can be enabled separately.
 
-DPYProxy comes with a TLS and DNS module circumventing TLS and DNS censorship respectively. Both modules are enabled by default:
+DPYProxy comes with a TLS and DNS module circumventing TLS and DNS censorship respectively. Both modules are enabled by default.
+DPYPRoxy also comes with an experimental HTTP module that is disables by default.
 
 
 ### DNS Module
@@ -104,70 +105,114 @@ Proxy for circumventing DPI-based censorship.
 
 TLS Module:
   --tls_disabled_modes {HTTP,HTTPS,SNI,SOCKSv4,SOCKSv4a,SOCKSv5}
-                        List of proxy modes to ignore. By default, all none are disabled. Hence, all are enabled
+                        List of proxy modes to ignore. By default, all none
+                        are disabled. Hence, all are enabled
   --tls_timeout TLS_TIMEOUT
-                        Connection timeout in seconds
-  --tls_host TLS_HOST   Address the proxy server runs on
-  --tls_port TLS_PORT   Port the proxy server runs on
+                        Connection timeout in seconds (default: 10)
+  --tls_host TLS_HOST   Address the proxy server runs on (default: localhost)
+  --tls_port TLS_PORT   Port the proxy server runs on (default: 4433)
   --tls_record_version TLS_RECORD_VERSION
-                        Overwrites the TLS version in the TLS record with the given bytes. Pre-defined values ['DEFAULT', 'TLS10', 'TLS11', 'TLS12', 'TLS13_DRAFT_28', 'TLS13', 'SSL3', 'INVALID_SMALLER', 'INVALID_BIGGER'] or 2 byte long values such as 0303 or FFFF can be provided.
+                        Overwrites the TLS version in the TLS record with the
+                        given bytes. Pre-defined values ['DEFAULT', 'TLS10',
+                        'TLS11', 'TLS12', 'TLS13_DRAFT_28', 'TLS13', 'SSL3',
+                        'INVALID_SMALLER', 'INVALID_BIGGER'] or 2 byte long
+                        values such as 0303 or FFFF can be provided. (default:
+                        DEFAULT)
   --tls_record_frag, --no-tls_record_frag
-                        Whether to use record fragmentation to forwarded TLS handshake messages (default: True)
+                        Whether to use record fragmentation to forwarded TLS
+                        handshake messages (default: True)
   --tls_tcp_frag, --no-tls_tcp_frag
-                        Whether to use TCP fragmentation to forwarded messages. (default: True)
+                        Whether to use TCP fragmentation to forwarded
+                        messages. (default: True)
   --tls_frag_size TLS_FRAG_SIZE
-                        Bytes in each TCP/TLS record fragment
+                        Bytes in each TCP/TLS record fragment (default: 20)
   --tls_dns_server_ip TLS_DNS_SERVER_IP
-                        DNS server IP for all DNS queries of the TLS module. If not given, the DNS server started by the DNS module us used. If DNS module is not used, the OS default DNS server is used.
+                        DNS server IP for all DNS queries of the TLS module.
+                        If not given, the DNS server started by the DNS module
+                        is used. If DNS module is not used, the OS default DNS
+                        server is used.
   --tls_dns_server_port TLS_DNS_SERVER_PORT
-                        DNS server port for all DNS queries. Only set if a DNS server IP is given. If not given, the default port 53 is used.
+                        DNS server port for all DNS queries. Only set if a DNS
+                        server IP is given.
   --tls_forward_proxy_host TLS_FORWARD_PROXY_HOST
-                        Host of the forward proxy if any is present
+                        Host of the forward proxy if any is present. Example:
+                        'localhost'
   --tls_forward_proxy_port TLS_FORWARD_PROXY_PORT
                         Port the forward proxy server runs on
   --tls_forward_proxy_mode {HTTP,HTTPS,SNI,SOCKSv4,SOCKSv4a,SOCKSv5}
-                        The proxy type of the forward proxy
+                        The proxy type of the forward proxy (default: HTTPS)
   --tls_forward_proxy_resolve_address, --no-tls_forward_proxy_resolve_address
-                        Whether to resolve domains before including them in the HTTP CONNECT request to the second proxy (default: False)
+                        Whether to resolve domains before including them in
+                        the HTTP CONNECT request to the second proxy (default:
+                        False)
 
 DNS Module:
-  --dns_mode DNS_MODE   Mode that the DNS proxy operates in. Default AUTO. If not set to AUTO, still attempts to automatically determine a resolver for the configured mode. To pre-define the used DNS mode and server set this flag and the dns_resolver_host and optionally the dns_resolver_port flags.
+  --dns_mode DNS_MODE   Mode that the DNS proxy operates in. Default AUTO. If
+                        not set to AUTO, still attempts to automatically
+                        determine a resolver for the configured mode. To pre-
+                        define the used DNS mode and server set this flag and
+                        the dns_resolver_host and optionally the
+                        dns_resolver_port flags. (default: AUTO)
   --dns_timeout DNS_TIMEOUT
-                        Connection timeout in seconds. For the LAST_RESPONSE mode this timeout will always be reached. Set this timeout and the timeout of calling application accordingly.
-  --dns_host DNS_HOST   Address the proxy server runs on
-  --dns_port DNS_PORT   Port the proxy server runs on
+                        Connection timeout in seconds. For the LAST_RESPONSE
+                        mode this timeout will always be reached. Set this
+                        timeout and the timeout of calling application
+                        accordingly. (default: 3)
+  --dns_host DNS_HOST   Address the proxy server runs on (default: 127.0.0.1)
+  --dns_port DNS_PORT   Port the proxy server runs on (default: 5533)
   --dns_resolver_host DNS_RESOLVER_HOST
-                        DNS resolver IP. If set, must correspond to the selected dns_mode.
+                        DNS resolver IP. If set, must correspond to the
+                        selected dns_mode.
   --dns_resolver_port DNS_RESOLVER_PORT
-                        DNS resolver port. If set, must correspond to the selected dns_mode. If unset, port is chosen based on the chosen or determined mode's standard port
+                        DNS resolver port. If set, must correspond to the
+                        selected dns_mode. If unset, port is chosen based on
+                        the chosen or determined mode's standard port
   --dns_censored_domain DNS_CENSORED_DOMAIN
-                        A domain name censored in your location. Used to determine working circumventions methods. Specify together with --dns_censored_domain_ip
+                        A domain name censored in your location. Used to
+                        determine working circumventions methods. Specify
+                        together with --dns_compare_ip_ranges (default:
+                        www.google.dj)
   --dns_compare_ip_ranges DNS_COMPARE_IP_RANGES
-                        A list of IP ranges the resolved IP of the censored domain lies in. The censored domain is specifiable in --dns_censored_domain.
+                        A list of IP ranges the resolved IP of the censored
+                        domain lies in. The censored domain is specifiable in
+                        --dns_censored_domain.
   --dns_block_page_ips DNS_BLOCK_PAGE_IPS
-                        Whether the given IP ranges to compare are block page IPs or not. Default is False.
+                        Whether the given IP ranges to compare are block page
+                        IPs or not. (default: False)
   --dns_add_sni DNS_ADD_SNI
-                        Whether or not to include the SNI for encrypted DNS modes. Defaults to True.
+                        Whether or not to include the SNI for encrypted DNS
+                        modes. (default: True)
   --dns_working_resolver_config DNS_WORKING_RESOLVER_CONFIG
-                        DPYProxy can save a working DNS resolver configuration, provide a location for this file here. Example: ./.working_resolver_config.json. If empty (default) no configuration is saved and a working configuration is determined in each run.
+                        DPYProxy can save a working DNS resolver
+                        configuration, provide a location for this file here.
+                        Example: ./.working_resolver_config.json. If empty
+                        (default) no configuration is saved and a working
+                        configuration is determined in each run.
 
 HTTP Module:
   --http_timeout HTTP_TIMEOUT
-                        Connection timeout in seconds
+                        Connection timeout in seconds (default: 10)
   --http_host HTTP_HOST
-                        Address the proxy server runs on
+                        Address the proxy server runs on (default: localhost)
   --http_port HTTP_PORT
-                        Port the proxy server runs on
+                        Port the proxy server runs on (default: 8080)
   --http_strategy HTTP_STRATEGY
-                        Number of which specific http manipulation strategy to apply. None: no manipulation, [1..70]: basic manipulations, [101, 129]: Smuggling.See HttpStrategies for meaning.
+                        Number of which specific http manipulation strategy to
+                        apply. None: no manipulation, [1..70]: basic
+                        manipulations, [101, 129]: Smuggling.See
+                        HttpStrategies for meaning.
   --http_smuggling_uncensored_url HTTP_SMUGGLING_UNCENSORED_URL
-                        Uncensored url to use for http smuggling.
+                        Uncensored url to use for http smuggling. (default:
+                        https://www.gov.cn/)
 
 Standard options:
   -h, --help            Show this help message and exit
-  --debug, --no-debug   Turns on debugging (default: False)
+  --debug               Turns on debugging (default: False)
   --disabled_modules DISABLED_MODULES
-                        List of proxy modules to disable. By default, only the HTTP module is disabled.
+                        List of proxy modules to disable. By default, only the
+                        HTTP module is disabled. Available choices:
+                        TLS,DNS,HTTP (default: HTTP)
+  -v, --version         Show program's version
 ```
 
 ## Examples
@@ -215,7 +260,7 @@ dig wikipedia.org @127.0.0.1 -p 5533
 ```
 
 Using some kind of capturing tool like Wireshark, you can inspect the made DNS requests for the selected circumvention strategy.
-# Docker
+# Run in Docker
 
 You can run DPYProxy in a Docker container. A standard setting is provided in the `docker-compose.yml` file. You can
 also build the image yourself using the provided `Dockerfile` or change the parameters in the `docker-compose.yml` file.
@@ -282,10 +327,23 @@ which can be pulled from a debug build via:
 adb shell run-as de.upb.syssec.dpyproxy cat /data/user/0/de.upb.syssec.dpyproxy/files/dpyproxy_status.json
 ```
 
-# Roadmap
+# Academic References
 
-We developed DPYProxy when writing a blogpost in which we circumvented the GFW with TLS record fragmentation. Thus, the 
-functionality of DPYProxy is currently limited. Below, I gathered some potential avenues for the future.
+DPYProxy was developed as part of the following academic publication:
+
+- `Poster: Circumventing the GFW with TLS Record Fragmentation` at ACM CCS 2023: https://dl.acm.org/doi/10.1145/3576915.3624372
+
+Please reference it should you use DPYProxy in your research.
+
+DPYProxy has previously been used in the following academic publications.
+
+- `Transport Layer Obscurity: Circumventing SNI Censorship on the TLS-Layer` at IEEE S&P 2025: https://ieeexplore.ieee.org/abstract/document/11023326
+
+- `A Wall Behind A Wall: Emerging Regional Censorship in China` at IEEE S&P 2025: https://ieeexplore.ieee.org/document/11023292
+
+- `Towards Automated DNS Censorship Circumvention` at Virtual FOCI 2026: https://www.petsymposium.org/foci/2026/foci-2026-0001.php
+
+# Roadmap
 
 ## Implemented
 - [x] HTTP Connect Proxy
@@ -297,9 +355,9 @@ functionality of DPYProxy is currently limited. Below, I gathered some potential
 - [x] HTTP Circumventions
 
 ## Todo
-- [ ] unit tests...
 - [ ] IPv6
+- [ ] TLS Automation (as for DNS)
 
-## Maintainance
+# Maintainance
 - Run `ruff check --fix` to fix the auto fixable lint issues.
 - Run `ruff format .` to pretty the code. Few could need a manual effort.
