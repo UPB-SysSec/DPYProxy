@@ -270,6 +270,71 @@ Start the container with:
 docker-compose up
 ```
 
+# Android
+
+DPYProxy can also run on Android as a Kivy app with a foreground service. The TLS module listens on port 4433
+and the DNS module on port 5533, both bound to `localhost`. Configure the app as your system's WLAN proxy
+(`127.0.0.1:4433`) to route HTTP(S) traffic through it. The HTTP module is disabled by default on Android.
+
+The Android app's entry point is `android_main.py`, not `main.py` — `main.py` is the desktop CLI (see
+[Requirements](#requirements) above). python-for-android hardcodes its app entry point filename to `main.py`
+with no buildozer.spec option to change it, so building for Android needs `android_main.py` copied into that
+place first; see [Building](#building) below.
+
+## Requirements
+
+- python3 and a virtual environment (`python3 -m venv .venv && source .venv/bin/activate`)
+- [buildozer](https://buildozer.readthedocs.io/en/latest/installation.html) (`pip install buildozer`)
+- Java (`javac`), Git, and Cython — buildozer will download and manage the Android SDK/NDK itself on first build
+- An Android device (or emulator) with USB or wireless debugging enabled, and `adb` on your machine
+
+## Building
+
+The build configuration lives in `buildozer.spec`. Build with `scripts/build-android.sh` instead of calling
+`buildozer` directly — it copies `android_main.py` into `main.py`'s place for the build and restores the real
+(desktop CLI) `main.py` afterward, even if the build fails. To build the debug APK without deploying it to a
+device:
+
+```sh
+./scripts/build-android.sh android debug
+```
+
+The first build downloads the Android SDK/NDK and compiles all recipes, which can take a while. Subsequent
+builds only rebuild what changed and are much faster. The resulting APK is placed in `bin/`.
+
+## Running on a device
+
+Connect a device via USB, or pair over Wi-Fi (Android 11+): on the device, enable Developer Options → Wireless
+debugging → "Pair device with pairing code", then:
+
+```sh
+adb pair <ip>:<pairing-port> <pairing-code>
+adb connect <ip>:<connect-port>
+```
+
+Build, install, launch, and stream the device log in one step:
+
+```sh
+./scripts/build-android.sh android debug deploy run logcat
+```
+
+## Configuration
+
+Unlike the CLI entry point (`main.py` on desktop), the Android service (`services/service.py`) does not accept
+command-line arguments — it starts with a fixed set of defaults (`build_default_args()`). The app's Settings
+tab lets you override the most relevant TLS/DNS options (ports, timeouts, fragmentation, DNS mode) while the
+proxy is stopped; changes are saved to `dpyproxy_config.json` in the app's private storage and applied on the
+next Start.
+
+## Debugging
+
+Service logs (visible in the app's Log tab) are also persisted to a JSON file in the app's private storage,
+which can be pulled from a debug build via:
+
+```sh
+adb shell run-as de.upb.syssec.dpyproxy cat /data/user/0/de.upb.syssec.dpyproxy/files/dpyproxy_status.json
+```
+
 # Academic References
 
 DPYProxy was developed as part of the following academic publication:

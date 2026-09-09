@@ -3,6 +3,9 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+.buildozer/
+bin/
+
 # C extensions
 *.so
 
@@ -31,6 +34,8 @@ MANIFEST
 #  before PyInstaller builds the exe, so as to inject date/other infos into it.
 *.manifest
 *.spec
+# ...except buildozer.spec, which is a tracked, hand-maintained Android build config, not a PyInstaller artifact.
+!buildozer.spec
 
 # Installer logs
 pip-log.txt
@@ -118,6 +123,11 @@ celerybeat.pid
 
 # SageMath parsed files
 *.sage.py
+
+# Android release signing (never commit — the signing identity for all future releases)
+*.keystore
+*.jks
+release-keystore-credentials*.txt
 
 # Environments
 .env

@@ -96,10 +96,10 @@ class Http:
     def connect_message(server_address: NetworkAddress, version: str) -> bytes:
         host_display = f"[{server_address.host}]" if is_valid_ipv6_address(server_address.host) else server_address.host
         return (
-            f"CONNECT {host_display}:{server_address.port} {version}\n"
-            f"Host: {host_display}:{server_address.port}\n\n".encode("ASCII")
+            f"CONNECT {host_display}:{server_address.port} {version}\r\n"
+            f"Host: {host_display}:{server_address.port}\r\n\r\n".encode("ASCII")
         )
 
     @staticmethod
     def http_200_ok(version: str) -> bytes:
-        return f"{version} 200 OK\n\n".encode("ASCII")
+        return f"{version} 200 OK\r\n\r\n".encode("ASCII")
