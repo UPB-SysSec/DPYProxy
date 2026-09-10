@@ -1,4 +1,9 @@
 # DPYProxy
+
+<a href="https://github.com/UPB-SysSec/DPYProxy/releases/latest">
+  <img alt="Get it on GitHub" src="https://img.shields.io/badge/Get%20it%20on-GitHub-24292f?style=for-the-badge&logo=github&logoColor=white">
+</a>
+
 DPYProxy is a python proxy that implements DPI evasion mechanisms. To circumvent TLS censorship, TLS record fragmentation and TCP
 segmentation are implemented. To circumvent DNS censorship, DPYProxy uses encrypted DNS and TCP segmentation. All DPI evasion mechanisms can be enabled separately.
 

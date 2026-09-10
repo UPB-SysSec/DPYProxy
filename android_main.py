@@ -426,6 +426,21 @@ def styled_spinner(text: str, values) -> Spinner:
 # ------------------------------------------------------------------- app --
 
 
+# Cap how many log lines the UI keeps in the Label's text. Without this, a
+# long background session accumulates unbounded text, and re-rendering that
+# huge Label texture after resuming from background can render black. Kept
+# tighter than the service's own MAX_LOG_LINES buffer since this is just the
+# visible tail, not the diagnostic history.
+MAX_LOG_LINES = 50
+
+
+def _trim_log_lines(text: str) -> str:
+    lines = text.split("\n")
+    if len(lines) > MAX_LOG_LINES:
+        lines = lines[-MAX_LOG_LINES:]
+    return "\n".join(lines)
+
+
 class KivyLogHandler(logging.Handler):
     def __init__(self, label: Label, scroll_view: ScrollView):
         super().__init__()
@@ -437,7 +452,7 @@ class KivyLogHandler(logging.Handler):
         Clock.schedule_once(lambda dt: self._append(msg))
 
     def _append(self, msg):
-        self.label.text += f"\n{msg}"
+        self.label.text = _trim_log_lines(self.label.text + f"\n{msg}")
         self.scroll_view.scroll_y = 0
 
 
@@ -874,9 +889,16 @@ class DPYProxyApp(App):
             if ts != self._last_ts:
                 self._last_ts = ts
                 if log != self._last_log:
-                    new_text = log[len(self._last_log) :]
-                    if new_text.strip():
-                        self.log_label.text += new_text
+                    if log.startswith(self._last_log):
+                        # Common case: the service only appended lines.
+                        new_text = log[len(self._last_log) :]
+                        if new_text.strip():
+                            self.log_label.text = _trim_log_lines(self.log_label.text + new_text)
+                            self.scroll_view.scroll_y = 0
+                    else:
+                        # The service rotated its buffer (dropped old lines) -
+                        # can't diff by suffix anymore, so just resync directly.
+                        self.log_label.text = _trim_log_lines(log)
                         self.scroll_view.scroll_y = 0
                     self._last_log = log
 

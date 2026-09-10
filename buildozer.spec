@@ -55,7 +55,7 @@ requirements = python3,kivy,charset_normalizer,anyio,attrs,certifi,cffi,cryptogr
 #presplash.filename = %(source.dir)s/data/presplash.png
 
 # (str) Icon of the application
-#icon.filename = %(source.dir)s/data/icon.png
+icon.filename = %(source.dir)s/data/icon.png
 
 # (list) Supported orientationsservice
 # Valid options are: landscape, portrait, portrait-reverse, landscape-reverse, or all

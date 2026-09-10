@@ -62,6 +62,14 @@ def load_ui_config() -> dict:
         return {}
 
 
+# Cap the log kept in the status file so a long background session (lots of
+# proxied traffic -> lots of log lines) can't grow the file unbounded. Without
+# this, both the per-line read-modify-write below and the UI's Label text
+# (which mirrors this buffer) grow without limit, and re-rendering a huge
+# Label texture after the app resumes from background can render black.
+MAX_LOG_LINES = 300
+
+
 def write_status(status: str, log: str = ""):
     try:
         with open(STATUS_FILE, "w") as f:
@@ -76,7 +84,11 @@ def log_to_file(msg: str):
         if os.path.exists(STATUS_FILE):
             with open(STATUS_FILE) as f:
                 data = json.load(f)
-        data["log"] = data.get("log", "") + "\n" + msg
+        lines = data.get("log", "").split("\n")
+        lines.append(msg)
+        if len(lines) > MAX_LOG_LINES:
+            lines = lines[-MAX_LOG_LINES:]
+        data["log"] = "\n".join(lines)
         data["ts"] = time.time()
         with open(STATUS_FILE, "w") as f:
             json.dump(data, f)
